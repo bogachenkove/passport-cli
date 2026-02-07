@@ -1,0 +1,30 @@
+# Libraries
+*.dll
+
+# Executables
+*.exe
+
+# Debugger
+*.pdb
+Debug
+
+# Logger
+*.log
+*.tlog
+
+# Database
+*.db
+
+# Compiled Object
+*.obj
+
+# Linker
+*.ilk
+
+# Visual Studio
+.vs
+*.vsidx
+*.sln
+*.aps
+*.vcxproj
+*.vcxproj.*
