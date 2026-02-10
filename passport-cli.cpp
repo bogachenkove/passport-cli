@@ -5,6 +5,8 @@
 #include <string>
 #include <sys/stat.h>
 #include <filesystem>
+#include <vector>
+#include <algorithm>
 
 #include "crypto.hpp"
 #include "database.hpp"
@@ -233,6 +235,12 @@ namespace {
 			return;
 		}
 		const auto kind = terminal::prompt_record_kind_for_list();
+
+		if (kind == terminal::RecordKind::Cancel) {
+			terminal::show_message("Operation cancelled.");
+			return;
+		}
+
 		switch (kind) {
 		case terminal::RecordKind::Password:
 			terminal::display_password_records(db);
@@ -240,10 +248,17 @@ namespace {
 		case terminal::RecordKind::Note:
 			terminal::display_note_records(db);
 			break;
+		default:
+			break;
 		}
 	}
 	void handle_add_record(PassportDatabase& db) {
 		const auto kind = terminal::prompt_record_kind_for_add();
+
+		if (kind == terminal::RecordKind::Cancel) {
+			terminal::show_message("Operation cancelled.");
+			return;
+		}
 
 		switch (kind) {
 		case terminal::RecordKind::Password: {
@@ -258,14 +273,52 @@ namespace {
 			terminal::show_success("Note record added successfully.");
 			break;
 		}
+		default:
+			break;
 		}
 	}
+	std::vector<std::size_t> parse_record_numbers(const std::string& input, std::size_t max_records) {
+		std::vector<std::size_t> indices;
+		std::istringstream iss(input);
+		std::string token;
+
+		while (iss >> token) {
+			try {
+				std::size_t idx = std::stoul(token);
+				if (idx == 0) {
+					return {};
+				}
+				if (idx < 1 || idx > max_records) {
+					terminal::show_error("Record number " + std::to_string(idx) +
+						" is out of range (1-" + std::to_string(max_records) + ").");
+					return {};
+				}
+				indices.push_back(idx - 1);
+			}
+			catch (...) {
+				terminal::show_error("Invalid input: '" + token + "' is not a valid number.");
+				return {};
+			}
+		}
+		std::sort(indices.begin(), indices.end());
+		indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+		std::reverse(indices.begin(), indices.end());
+
+		return indices;
+	}
+
 	void handle_remove_record(PassportDatabase& db) {
 		if (db.record_count() == 0) {
 			terminal::show_message("The database is empty. Nothing to remove.");
 			return;
 		}
 		const auto kind = terminal::prompt_record_kind_for_remove();
+
+		if (kind == terminal::RecordKind::Cancel) {
+			terminal::show_message("Operation cancelled.");
+			return;
+		}
+
 		switch (kind) {
 		case terminal::RecordKind::Password: {
 			if (db.password_record_count() == 0) {
@@ -274,25 +327,37 @@ namespace {
 			}
 			terminal::display_password_records(db);
 			const auto input = terminal::prompt_for_input(
-				"\n  Enter record number to remove (0 to cancel): ");
-			std::size_t idx = 0;
-			try {
-				idx = std::stoul(input);
-			}
-			catch (...) {
-				terminal::show_error("Invalid input. Expected a number.");
+				"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+
+			auto indices = parse_record_numbers(input, db.password_record_count());
+
+			if (indices.empty()) {
+				if (input.find('0') != std::string::npos) {
+					terminal::show_message("Removal cancelled.");
+				}
+				else {
+					terminal::show_error("No valid records to remove.");
+				}
 				return;
 			}
-			if (idx == 0) {
-				terminal::show_message("Removal cancelled.");
-				return;
+
+			int removed_count = 0;
+			for (std::size_t idx : indices) {
+				if (db.remove_password_record(idx)) {
+					removed_count++;
+				}
 			}
-			if (db.remove_password_record(idx - 1)) {
-				terminal::show_success(
-					"Password record #" + std::to_string(idx) + " removed.");
+
+			if (removed_count > 0) {
+				if (removed_count == 1) {
+					terminal::show_success("1 password record removed.");
+				}
+				else {
+					terminal::show_success(std::to_string(removed_count) + " password records removed.");
+				}
 			}
 			else {
-				terminal::show_error("Invalid record number. No changes made.");
+				terminal::show_error("No records were removed.");
 			}
 			break;
 		}
@@ -303,30 +368,45 @@ namespace {
 			}
 			terminal::display_note_records(db);
 			const auto input = terminal::prompt_for_input(
-				"\n  Enter record number to remove (0 to cancel): ");
-			std::size_t idx = 0;
-			try {
-				idx = std::stoul(input);
-			}
-			catch (...) {
-				terminal::show_error("Invalid input. Expected a number.");
+				"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+
+			auto indices = parse_record_numbers(input, db.note_record_count());
+
+			if (indices.empty()) {
+				if (input.find('0') != std::string::npos) {
+					terminal::show_message("Removal cancelled.");
+				}
+				else {
+					terminal::show_error("No valid records to remove.");
+				}
 				return;
 			}
-			if (idx == 0) {
-				terminal::show_message("Removal cancelled.");
-				return;
+
+			int removed_count = 0;
+			for (std::size_t idx : indices) {
+				if (db.remove_note_record(idx)) {
+					removed_count++;
+				}
 			}
-			if (db.remove_note_record(idx - 1)) {
-				terminal::show_success(
-					"Note record #" + std::to_string(idx) + " removed.");
+
+			if (removed_count > 0) {
+				if (removed_count == 1) {
+					terminal::show_success("1 note record removed.");
+				}
+				else {
+					terminal::show_success(std::to_string(removed_count) + " note records removed.");
+				}
 			}
 			else {
-				terminal::show_error("Invalid record number. No changes made.");
+				terminal::show_error("No records were removed.");
 			}
 			break;
 		}
+		default:
+			break;
 		}
 	}
+
 	void run_main_menu(
 		PassportDatabase& db,
 		const std::string& db_path,
