@@ -24,42 +24,11 @@
 
 namespace terminal {
 	namespace {
-		bool is_valid_url(const std::string& url) {
-			if (url.empty()) return true;
-			try {
-				std::regex url_regex("^(https?://)([a-zA-Z0-9-]+\\.)*[a-zA-Z0-9-]+\\.[a-zA-Z]{2,6}$");
-				return std::regex_match(url, url_regex);
-			}
-			catch (const std::regex_error&) {
-				return false;
-			}
-		}
-
-		std::string ensure_url_protocol(const std::string& url) {
-			if (url.empty()) return url;
-			if (url.find("http://") == 0 || url.find("https://") == 0) {
-				return url;
-			}
-			return "http://" + url;
-		}
 		std::string format_field_display(const std::string& field) {
 			return field.empty() ? "---" : field;
 		}
-		bool is_single_char_valid(const std::string& input, char expected1, char expected2) {
-			if (input.length() != 1) {
-				return false;
-			}
-			char c = std::tolower(static_cast<unsigned char>(input[0]));
-			return c == expected1 || c == expected2;
-		}
-		bool is_single_char_valid_with_cancel(const std::string& input, char expected1, char expected2) {
-			if (input.length() != 1) {
-				return false;
-			}
-			char c = std::tolower(static_cast<unsigned char>(input[0]));
-			return c == expected1 || c == expected2 || c == 'q';
-		}
 	}
+
 	void clear_screen() {
 #ifdef _WIN32
 		std::system("cls");
@@ -67,15 +36,19 @@ namespace terminal {
 		std::system("clear");
 #endif
 	}
+
 	void show_message(const std::string& msg) {
 		std::cout << "  " << msg << '\n';
 	}
+
 	void show_error(const std::string& msg) {
 		std::cout << "  [!] " << msg << '\n';
 	}
+
 	void show_success(const std::string& msg) {
 		std::cout << "  [+] " << msg << '\n';
 	}
+
 	void show_welcome_banner() {
 		std::cout
 			<< '\n'
@@ -84,6 +57,7 @@ namespace terminal {
 			<< "  ======================================\n"
 			<< '\n';
 	}
+
 	std::string format_datetime(uint64_t ts) {
 		if (ts == 0) {
 			return "N/A";
@@ -99,6 +73,7 @@ namespace terminal {
 		std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm_buf);
 		return buf;
 	}
+
 	void display_password_records(const PassportDatabase& db) {
 		const auto& all = db.password_records();
 
@@ -153,6 +128,7 @@ namespace terminal {
 		}
 		std::cout << "\n  Total password records: " << all.size() << '\n';
 	}
+
 	void display_note_records(const PassportDatabase& db) {
 		const auto& all = db.note_records();
 		if (all.empty()) {
@@ -193,12 +169,14 @@ namespace terminal {
 		}
 		std::cout << "\n  Total note records: " << all.size() << '\n';
 	}
+
 	std::string prompt_for_input(const std::string& prompt) {
 		std::cout << prompt;
 		std::string line;
 		std::getline(std::cin, line);
 		return line;
 	}
+
 	std::string prompt_for_password(const std::string& prompt) {
 		std::cout << prompt;
 		std::string pw;
@@ -241,67 +219,6 @@ namespace terminal {
 	void wait_for_enter() {
 		std::cout << "\nPress Enter to continue...";
 		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-	}
-
-	bool is_field_empty(const std::string& value) {
-		return value.empty()
-			|| std::all_of(value.begin(), value.end(),
-				[](unsigned char c) {
-					return std::isspace(c);
-				});
-	}
-
-	bool is_master_password_length_valid(const std::string& pw) {
-		return pw.size() >= kPasswordMinLength_MasterPassword
-			&& pw.size() <= kPasswordMaxLength_MasterPassword;
-	}
-
-	bool is_ascii_field_valid(const std::string& value,
-		std::size_t min_len,
-		std::size_t max_len,
-		bool optional)
-	{
-		if (optional && value.empty()) {
-			return true;
-		}
-		if (!optional && value.empty()) {
-			return false;
-		}
-
-		if (value.size() < min_len || value.size() > max_len) {
-			return false;
-		}
-
-		for (unsigned char ch : value) {
-			if (ch < 0x20 || ch > 0x7E) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	bool file_exists(const std::string& path) {
-#ifdef _WIN32
-		DWORD dwAttrib = GetFileAttributesA(path.c_str());
-		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-			!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-#else
-		struct stat info {};
-		return stat(path.c_str(), &info) == 0 && S_ISREG(info.st_mode);
-#endif
-	}
-
-	bool prompt_for_overwrite(const std::string& path) {
-		std::cout << "\n  File already exists: " << path << "\n";
-		std::cout << "  Do you want to overwrite it? (y/N): ";
-		std::string response;
-		std::getline(std::cin, response);
-		if (response.empty()) {
-			return false;
-		}
-		char first_char = std::tolower(static_cast<unsigned char>(response[0]));
-		return (first_char == 'y');
 	}
 
 	int show_startup_menu() {
@@ -375,7 +292,7 @@ namespace terminal {
 			if (choice.empty()) {
 				continue;
 			}
-			if (!is_single_char_valid_with_cancel(choice, 'p', 'n')) {
+			if (!validation::is_single_char_valid_with_cancel(choice, 'p', 'n')) {
 				show_error("Invalid option. Please press P, N, or Q.");
 				continue;
 			}
@@ -406,7 +323,7 @@ namespace terminal {
 			if (choice.empty()) {
 				continue;
 			}
-			if (!is_single_char_valid_with_cancel(choice, 'p', 'n')) {
+			if (!validation::is_single_char_valid_with_cancel(choice, 'p', 'n')) {
 				show_error("Invalid option. Please press P, N, or Q.");
 				continue;
 			}
@@ -437,7 +354,7 @@ namespace terminal {
 			if (choice.empty()) {
 				continue;
 			}
-			if (!is_single_char_valid_with_cancel(choice, 'p', 'n')) {
+			if (!validation::is_single_char_valid_with_cancel(choice, 'p', 'n')) {
 				show_error("Invalid option. Please press P, N, or Q.");
 				continue;
 			}
@@ -462,42 +379,48 @@ namespace terminal {
 		std::cout << "\n  --- Add New Password Record (* = required) ---\n\n";
 		while (true) {
 			rec.login = prompt_for_input("  Login*:    ");
-			if (is_ascii_field_valid(rec.login, kLoginMinLength_Password,
-				kLoginMaxLength_Password, false)) {
+			if (validation::is_ascii_field_valid(rec.login,
+				validation::kLoginMinLength_Password,
+				validation::kLoginMaxLength_Password, false)) {
 				break;
 			}
 			show_error(
-				"Login is required and must be " + std::to_string(kLoginMinLength_Password) + "-"
-				+ std::to_string(kLoginMaxLength_Password)
-				+ " printable ASCII characters.");
+				"Login is required and must be " +
+				std::to_string(validation::kLoginMinLength_Password) + "-" +
+				std::to_string(validation::kLoginMaxLength_Password) +
+				" printable ASCII characters.");
 		}
 		while (true) {
 			rec.password = prompt_for_password("  Password*: ");
-			if (is_ascii_field_valid(rec.password, kPasswordMinLength_Password,
-				kPasswordMaxLength_Password, false)) {
+			if (validation::is_ascii_field_valid(rec.password,
+				validation::kPasswordMinLength_Password,
+				validation::kPasswordMaxLength_Password, false)) {
 				break;
 			}
 			show_error(
-				"Password is required and must be " + std::to_string(kPasswordMinLength_Password) + "-"
-				+ std::to_string(kPasswordMaxLength_Password)
-				+ " printable ASCII characters.");
+				"Password is required and must be " +
+				std::to_string(validation::kPasswordMinLength_Password) + "-" +
+				std::to_string(validation::kPasswordMaxLength_Password) +
+				" printable ASCII characters.");
 		}
 		while (true) {
 			rec.url = prompt_for_input("  URL:      (optional, leave empty for ---) ");
-			if (is_field_empty(rec.url)) {
+			if (validation::is_field_empty(rec.url)) {
 				rec.url = "";
 				break;
 			}
-			std::string url_with_protocol = ensure_url_protocol(rec.url);
-			if (url_with_protocol.size() < kUrlMinLength_Password ||
-				url_with_protocol.size() > kUrlMaxLength_Password) {
+			std::string url_with_protocol = validation::ensure_url_protocol(rec.url);
+			if (url_with_protocol.size() < validation::kUrlMinLength_Password ||
+				url_with_protocol.size() > validation::kUrlMaxLength_Password) {
 				show_error(
-					"URL length must be between " + std::to_string(kUrlMinLength_Password) + " and "
-					+ std::to_string(kUrlMaxLength_Password) + " characters (including protocol).");
+					"URL length must be between " +
+					std::to_string(validation::kUrlMinLength_Password) + " and " +
+					std::to_string(validation::kUrlMaxLength_Password) +
+					" characters (including protocol).");
 				continue;
 			}
 
-			if (is_valid_url(url_with_protocol)) {
+			if (validation::is_valid_url(url_with_protocol)) {
 				rec.url = url_with_protocol;
 				break;
 			}
@@ -506,24 +429,26 @@ namespace terminal {
 					"URL must be in format: http(s)://domain.extension\n"
 					"Domain can contain letters, numbers, and hyphens\n"
 					"Extension must be 2-6 letters only\n"
-					"Example: http://example.com or https://example-site.org");
+					"Example: http://example.com");
 			}
 		}
 		while (true) {
 			rec.note = prompt_for_input("  Note:     (optional, leave empty for ---) ");
-			if (is_field_empty(rec.note)) {
+			if (validation::is_field_empty(rec.note)) {
 				rec.note = "";
 				break;
 			}
-			if (is_ascii_field_valid(rec.note, kNoteMinLength_Password,
-				kNoteMaxLength_Password, true)) {
+			if (validation::is_ascii_field_valid(rec.note,
+				validation::kNoteMinLength_Password,
+				validation::kNoteMaxLength_Password, true)) {
 				break;
 			}
 			else {
 				show_error(
-					"If note is provided, it must be " + std::to_string(kNoteMinLength_Password) + "-"
-					+ std::to_string(kNoteMaxLength_Password)
-					+ " printable ASCII characters, or leave empty for ---.");
+					"If note is provided, it must be " +
+					std::to_string(validation::kNoteMinLength_Password) + "-" +
+					std::to_string(validation::kNoteMaxLength_Password) +
+					" printable ASCII characters, or leave empty for ---.");
 			}
 		}
 
@@ -535,30 +460,34 @@ namespace terminal {
 		std::cout << "\n  --- Add New Note Record (* = required) ---\n\n";
 		while (true) {
 			rec.title = prompt_for_input("  Title*:  ");
-			if (is_ascii_field_valid(rec.title, kTitleMinLength_Note,
-				kTitleMaxLength_Note, false)) {
+			if (validation::is_ascii_field_valid(rec.title,
+				validation::kTitleMinLength_Note,
+				validation::kTitleMaxLength_Note, false)) {
 				break;
 			}
 			show_error(
-				"Title is required and must be " + std::to_string(kTitleMinLength_Note) + "-"
-				+ std::to_string(kTitleMaxLength_Note)
-				+ " printable ASCII characters.");
+				"Title is required and must be " +
+				std::to_string(validation::kTitleMinLength_Note) + "-" +
+				std::to_string(validation::kTitleMaxLength_Note) +
+				" printable ASCII characters.");
 		}
 		while (true) {
 			rec.note = prompt_for_input("  Note:    (optional, leave empty for ---) ");
-			if (is_field_empty(rec.note)) {
+			if (validation::is_field_empty(rec.note)) {
 				rec.note = "";
 				break;
 			}
-			if (is_ascii_field_valid(rec.note, kNoteMinLength_Note,
-				kNoteMaxLength_Note, true)) {
+			if (validation::is_ascii_field_valid(rec.note,
+				validation::kNoteMinLength_Note,
+				validation::kNoteMaxLength_Note, true)) {
 				break;
 			}
 			else {
 				show_error(
-					"If note is provided, it must be " + std::to_string(kNoteMinLength_Note) + "-"
-					+ std::to_string(kNoteMaxLength_Note)
-					+ " printable ASCII characters, or leave empty for ---.");
+					"If note is provided, it must be " +
+					std::to_string(validation::kNoteMinLength_Note) + "-" +
+					std::to_string(validation::kNoteMaxLength_Note) +
+					" printable ASCII characters, or leave empty for ---.");
 			}
 		}
 
