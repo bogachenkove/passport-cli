@@ -2,8 +2,6 @@
 
 #include <cstring>
 #include <fstream>
-#include <sys/stat.h>
-#include <sodium.h>
 
 namespace validation_security {
 	void validate_file_size(const std::string& path) {
@@ -13,50 +11,32 @@ namespace validation_security {
 				"Cannot stat file \"" + path + "\"." };
 		}
 		const auto size = static_cast<std::size_t>(info.st_size);
-		if (size > kMaxFileSize) {
-			throw PolicyViolation{
+		if (size > core::constants::kMaxFileSize) {
+			throw core::errors::PolicyViolation{
 				"Database file exceeds the maximum allowed size of 100 MiB ("
 				+ std::to_string(size) + " bytes)." };
 		}
 	}
 
 	void validate_blob_size(std::size_t size) {
-		if (size > kMaxFileSize) {
-			throw PolicyViolation{
+		if (size > core::constants::kMaxFileSize) {
+			throw core::errors::PolicyViolation{
 				"Data blob exceeds the maximum allowed size of 100 MiB ("
 				+ std::to_string(size) + " bytes)." };
 		}
 	}
 
-	bool check_file_access(const std::string& path, bool for_write) {
-		if (for_write) {
-			std::ofstream ofs(path, std::ios::binary | std::ios::app);
-			if (!ofs.is_open()) {
-				return false;
-			}
-			ofs.close();
-		}
-		else {
-			std::ifstream ifs(path, std::ios::binary);
-			if (!ifs.is_open()) {
-				return false;
-			}
-			ifs.close();
-		}
-		return true;
-	}
-
 	void validate_seed_sizes(const std::vector<uint8_t>& master_seed,
 		const std::vector<uint8_t>& context_salt) {
-		if (master_seed.size() != kMasterSeedBytes) {
-			throw TypeSystemError{
+		if (master_seed.size() != core::constants::kMasterSeedBytes) {
+			throw core::errors::TypeSystemError{
 				"master_seed must be exactly "
-				+ std::to_string(kMasterSeedBytes) + " bytes." };
+				+ std::to_string(core::constants::kMasterSeedBytes) + " bytes." };
 		}
-		if (context_salt.size() != kContextSaltBytes) {
-			throw TypeSystemError{
+		if (context_salt.size() != core::constants::kContextSaltBytes) {
+			throw core::errors::TypeSystemError{
 				"context_salt must be exactly "
-				+ std::to_string(kContextSaltBytes) + " bytes." };
+				+ std::to_string(core::constants::kContextSaltBytes) + " bytes." };
 		}
 	}
 
@@ -66,30 +46,30 @@ namespace validation_security {
 	}
 
 	void validate_salt_size(const std::vector<uint8_t>& salt) {
-		if (salt.size() != kSaltBytes) {
-			throw KeyDerivationError{
-				"Salt must be exactly " + std::to_string(kSaltBytes) + " bytes." };
+		if (salt.size() != core::constants::kSaltBytes) {
+			throw core::errors::KeyDerivationError{
+				"Salt must be exactly " + std::to_string(core::constants::kSaltBytes) + " bytes." };
 		}
 	}
 
 	void validate_ciphertext_size(const std::vector<uint8_t>& ciphertext_with_tag) {
-		if (ciphertext_with_tag.size() < kAeadTagBytes) {
-			throw AeadError{
+		if (ciphertext_with_tag.size() < core::constants::kAeadTagBytes) {
+			throw core::errors::AeadError{
 				"Ciphertext is too short to contain an authentication tag." };
 		}
 	}
 
 	void validate_key_size(const std::vector<uint8_t>& key) {
-		if (key.size() != kDerivedKeyLength) {
-			throw AeadError{
-				"Key must be exactly " + std::to_string(kDerivedKeyLength) + " bytes." };
+		if (key.size() != core::constants::kDerivedKeyLength) {
+			throw core::errors::AeadError{
+				"Key must be exactly " + std::to_string(core::constants::kDerivedKeyLength) + " bytes." };
 		}
 	}
 
 	void validate_nonce_size(const std::vector<uint8_t>& nonce) {
-		if (nonce.size() != kAeadNonceBytes) {
-			throw AeadError{
-				"Nonce must be exactly " + std::to_string(kAeadNonceBytes) + " bytes." };
+		if (nonce.size() != core::constants::kAeadNonceBytes) {
+			throw core::errors::AeadError{
+				"Nonce must be exactly " + std::to_string(core::constants::kAeadNonceBytes) + " bytes." };
 		}
 	}
 }
