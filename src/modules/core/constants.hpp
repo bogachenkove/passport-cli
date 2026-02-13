@@ -15,7 +15,7 @@ namespace core::constants {
 	inline constexpr unsigned long long kOpsLimit = crypto_pwhash_OPSLIMIT_INTERACTIVE;
 	inline constexpr std::size_t kMemLimit = crypto_pwhash_MEMLIMIT_INTERACTIVE;
 	inline constexpr int kAlgorithm = crypto_pwhash_ALG_ARGON2ID13;
-	inline constexpr std::uint8_t kFileMagic[4] = { 'P', 'A', 'S', 'S' };
+	inline constexpr std::uint8_t kFileMagic[4] = {'P', 'A', 'S', 'S'};
 	inline constexpr std::size_t  kHeaderAdSize = 64;
 	inline constexpr std::size_t kPasswordMinLength_MasterPassword = 12;
 	inline constexpr std::size_t kPasswordMaxLength_MasterPassword = 128;
@@ -31,5 +31,4 @@ namespace core::constants {
 	inline constexpr std::size_t kTitleMaxLength_Note = 12;
 	inline constexpr std::size_t kNoteMinLength_Note = 5;
 	inline constexpr std::size_t kNoteMaxLength_Note = 500;
-
 }

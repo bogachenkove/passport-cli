@@ -8,7 +8,6 @@ int main() {
 	auto terminal = std::make_shared<ui::ConsoleTerminal>();
 	auto crypto = std::make_shared<security::crypto::SodiumCryptoService>();
 	auto database = std::make_shared<security::storage::FileDatabase>(crypto);
-
 	app::Application app(terminal, crypto, database);
 	return app.run();
 }
