@@ -1,5 +1,5 @@
 #pragma once
-#include "../../core/constants.hpp"
+#include "../core/constants.hpp"
 #include <algorithm>
 #include <cctype>
 #include <string>
