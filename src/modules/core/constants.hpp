@@ -1,7 +1,7 @@
 #pragma once
-
 #include <cstddef>
 #include <cstdint>
+#include <string> // may have to be removed
 #include <sodium.h>
 
 namespace core::constants {
@@ -15,8 +15,9 @@ namespace core::constants {
 	inline constexpr unsigned long long kOpsLimit = crypto_pwhash_OPSLIMIT_INTERACTIVE;
 	inline constexpr std::size_t kMemLimit = crypto_pwhash_MEMLIMIT_INTERACTIVE;
 	inline constexpr int kAlgorithm = crypto_pwhash_ALG_ARGON2ID13;
-	inline constexpr std::uint8_t kFileMagic[4] = {'P', 'A', 'S', 'S'};
-	inline constexpr std::size_t  kHeaderAdSize = 64;
+	inline constexpr std::uint8_t kFileMagic[4] = {'P','S','R','T'};
+	inline constexpr std::uint8_t kFileMagicNull = 0x00;
+	inline constexpr std::size_t  kHeaderAdSize = 65;
 	inline constexpr std::size_t kPasswordMinLength_MasterPassword = 12;
 	inline constexpr std::size_t kPasswordMaxLength_MasterPassword = 128;
 	inline constexpr std::size_t kLoginMinLength_Password = 3;
@@ -31,4 +32,27 @@ namespace core::constants {
 	inline constexpr std::size_t kTitleMaxLength_Note = 12;
 	inline constexpr std::size_t kNoteMinLength_Note = 5;
 	inline constexpr std::size_t kNoteMaxLength_Note = 500;
+	inline constexpr std::size_t kCardNumberMinLength_BankCard = 13;
+	inline constexpr std::size_t kCardNumberMaxLength_BankCard = 19;
+	inline constexpr std::size_t kCVVMinLength_BankCard = 3;
+	inline constexpr std::size_t kCVVMaxLength_BankCard = 4;
+	inline constexpr std::size_t kCardHolderNameMinLength_BankCard = 4;
+	inline constexpr std::size_t kCardHolderNameMaxLength_BankCard = 30;
+	inline constexpr std::size_t kNoteMinLength_BankCard = 5;
+	inline constexpr std::size_t kNoteMaxLength_BankCard = 30;
+	inline constexpr std::size_t kCardNumberMinLength_DiscountCard = 8;
+	inline constexpr std::size_t kCardNumberMaxLength_DiscountCard = 16;
+	inline constexpr std::size_t kBarCodeMinLength_DiscountCard = 6;
+	inline constexpr std::size_t kBarCodeMaxLength_DiscountCard = 13;
+	inline constexpr std::size_t kCVVMinLength_DiscountCard = 3;
+	inline constexpr std::size_t kCVVMaxLength_DiscountCard = 4;
+	inline constexpr std::size_t kStoreNameMinLength_DiscountCard = 4;
+	inline constexpr std::size_t kStoreNameMaxLength_DiscountCard = 30;
+	inline constexpr std::size_t kNoteMinLength_DiscountCard = 5;
+	inline constexpr std::size_t kNoteMaxLength_DiscountCard = 30;
+	inline constexpr const char* kLowercaseChars = "abcdefghijklmnopqrstuvwxyz";
+	inline constexpr const char* kUppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	inline constexpr const char* kDigitChars = "0123456789";
+	inline constexpr const char* kSpecialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+	inline const std::string kAllowedPasswordChars = std::string(kLowercaseChars) + std::string(kUppercaseChars) + std::string(kDigitChars) + std::string(kSpecialChars);
 }

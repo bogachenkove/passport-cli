@@ -1,9 +1,9 @@
 #include "console_terminal.hpp"
-#include "../core/platform.hpp"
 #include <iostream>
-#include <iomanip>
-#include <ctime>
 #include <limits>
+#include <ctime>
+#include <string>
+#include "../core/platform.hpp"
 
 namespace ui {
 	void ConsoleTerminal::show_message(const std::string& msg) {
@@ -37,11 +37,11 @@ namespace ui {
 		std::time_t t = static_cast<std::time_t>(ts);
 		std::tm tm_buf{
 		};
-	#ifdef _WIN32
-			localtime_s(&tm_buf, &t);
-	#else
-			localtime_r(&t, &tm_buf);
-	#endif
+#ifdef _WIN32
+		localtime_s(&tm_buf, &t);
+#else
+		localtime_r(&t, &tm_buf);
+#endif
 		char buf[17];
 		std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm_buf);
 		return buf;

@@ -1,5 +1,4 @@
-﻿#pragma once
-
+#pragma once
 #include <string>
 
 namespace domain::validation {
@@ -9,4 +8,7 @@ namespace domain::validation {
 	std::string ensure_url_protocol(const std::string& url);
 	bool is_single_char_valid(const std::string& input, char expected1, char expected2);
 	bool is_single_char_valid_with_cancel(const std::string& input, char expected1, char expected2);
+	[[nodiscard]] bool is_digits_only(const std::string& value);
+	[[nodiscard]] bool is_valid_expiry(const std::string& value);
+	[[nodiscard]] bool is_letters_and_spaces(const std::string& value);
 }

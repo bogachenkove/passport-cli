@@ -1,12 +1,16 @@
 #include "create_database_cmd.hpp"
-#include "../../core/constants.hpp"
-#include "../../validation/field_validator.hpp"
-#include "../../storage/file_utils.hpp"
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_database.hpp"
-#include <cctype>
-#include "../../validation/password_policy.hpp"
+#include "../../interface/interface_crypto_service.hpp"
+#include "../../core/constants.hpp"
 #include "../../core/errors.hpp"
+#include "../../validation/field_validator.hpp"
+#include "../../storage/file_utils.hpp"
+#include "../../validation/password_policy.hpp"
+#include "../utils/password_generator.hpp"
+#include <cctype>
+#include <string>
+#include <memory>
 
 namespace app::commands {
 	CreateDatabaseCommand::CreateDatabaseCommand(
@@ -44,24 +48,72 @@ namespace app::commands {
 			return false;
 		}
 		term_->show_message("Saving to: " + path);
-		std::string pw = term_->prompt_password("  Set master password (min 12 chars): ");
-		if (domain::validation::is_field_empty(pw)) {
-			term_->show_error("Master password cannot be empty.");
-			return false;
+		term_->show_message("\nChoose password generation mode:");
+		term_->show_message("  [M]anual - enter password manually");
+		term_->show_message("  [A]uto   - generate a strong password automatically");
+		char mode = 0;
+		while (true) {
+			auto mode_choice = term_->prompt_input("  Your choice (M/A): ");
+			if (mode_choice.empty()) continue;
+			mode = std::tolower(static_cast<unsigned char>(mode_choice[0]));
+			if (mode == 'm' || mode == 'a') break;
+			term_->show_error("Invalid option. Please press M or A.");
 		}
-		if (!domain::validation::is_master_password_length_valid(pw)) {
-			term_->show_error(
-				"Master password must be between " +
-				std::to_string(core::constants::kPasswordMinLength_MasterPassword) +
-				" and " +
-				std::to_string(core::constants::kPasswordMaxLength_MasterPassword) +
-				" characters.");
-			return false;
+		std::string pw;
+		if (mode == 'a') {
+			pw = app::utils::generate_random_password(
+				*crypto_,
+				core::constants::kPasswordMinLength_MasterPassword,
+				core::constants::kPasswordMaxLength_MasterPassword
+			);
+			term_->show_message("\nGenerated master password (please write it down):");
+			term_->show_message("  " + pw);
+			term_->show_message("");
+			auto confirm = term_->prompt_password("  Please re-enter the generated password to confirm: ");
+			if (pw != confirm) {
+				term_->show_error("Passwords do not match. Database creation cancelled.");
+				return false;
+			}
 		}
-		auto confirm = term_->prompt_password("  Confirm master password: ");
-		if (pw != confirm) {
-			term_->show_error("Passwords do not match.");
-			return false;
+		else {
+			pw = term_->prompt_password("  Set master password (min 12 chars): ");
+			if (domain::validation::is_field_empty(pw)) {
+				term_->show_error("Master password cannot be empty.");
+				return false;
+			}
+			if (!domain::validation::is_master_password_length_valid(pw)) {
+				term_->show_error(
+					"Master password must be between " +
+					std::to_string(core::constants::kPasswordMinLength_MasterPassword) +
+					" and " +
+					std::to_string(core::constants::kPasswordMaxLength_MasterPassword) +
+					" characters.");
+				return false;
+			}
+			if (!domain::validation::is_password_characters_valid(pw)) {
+				term_->show_error(
+					"Master password contains invalid characters. Allowed characters:\n"
+					"  Lowercase: " + std::string(core::constants::kLowercaseChars) + "\n"
+					"  Uppercase: " + std::string(core::constants::kUppercaseChars) + "\n"
+					"  Digits: " + std::string(core::constants::kDigitChars) + "\n"
+					"  Specials: " + std::string(core::constants::kSpecialChars));
+				return false;
+			}
+			if (!domain::validation::is_master_password_complex(pw)) {
+				term_->show_error(
+					"Master password must contain at least one lowercase letter, "
+					"one uppercase letter, one digit, and one special character. Required characters:\n"
+					"  Lowercase: " + std::string(core::constants::kLowercaseChars) + "\n"
+					"  Uppercase: " + std::string(core::constants::kUppercaseChars) + "\n"
+					"  Digits: " + std::string(core::constants::kDigitChars) + "\n"
+					"  Specials: " + std::string(core::constants::kSpecialChars));
+				return false;
+			}
+			auto confirm = term_->prompt_password("  Confirm master password: ");
+			if (pw != confirm) {
+				term_->show_error("Passwords do not match.");
+				return false;
+			}
 		}
 		try {
 			if (!db_->save_to_file(path, pw)) {

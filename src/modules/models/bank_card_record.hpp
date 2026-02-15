@@ -3,9 +3,12 @@
 #include <string>
 
 namespace domain::models {
-	struct NoteRecord {
+	struct BankCardRecord {
 		std::uint64_t date = 0;
-		std::string title;
+		std::string card_number;
+		std::string expiry_date;
+		std::string cvv;
+		std::string cardholder_name;
 		std::string note;
 	};
 }

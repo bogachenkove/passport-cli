@@ -1,5 +1,8 @@
 #include "list_records_cmd.hpp"
 #include "../../ui/record_formatter.hpp"
+#include "../../interface/interface_terminal.hpp"
+#include "../../interface/interface_database.hpp"
+#include <memory>
 #include <cctype>
 
 namespace app::commands {
@@ -14,7 +17,9 @@ namespace app::commands {
 		}
 		term_->show_message("\nWhich records would you like to view?");
 		term_->show_message("  [P]asswords");
+		term_->show_message("  [B]ank Cards");
 		term_->show_message("  [N]otes");
+		term_->show_message("  [D]iscount Cards");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -24,8 +29,16 @@ namespace app::commands {
 				ui::display_password_records(*db_, term_);
 				return;
 			}
+			else if (key == 'b') {
+				ui::display_bankcard_records(*db_, term_);
+				return;
+			}
 			else if (key == 'n') {
 				ui::display_note_records(*db_, term_);
+				return;
+			}
+			else if (key == 'd') {
+				ui::display_discountcard_records(*db_, term_);
 				return;
 			}
 			else if (key == 'q') {
@@ -33,7 +46,7 @@ namespace app::commands {
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, N, or Q.");
+				term_->show_error("Invalid option. Please press P, B, N, D, or Q.");
 			}
 		}
 	}

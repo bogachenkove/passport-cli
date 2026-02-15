@@ -1,7 +1,7 @@
 #pragma once
-
-#include "../interface/interface_terminal.hpp"
+#include <cstdint>
 #include <string>
+#include "../interface/interface_terminal.hpp"
 
 namespace ui {
 	class ConsoleTerminal final : public domain::interfaces::ITerminal {

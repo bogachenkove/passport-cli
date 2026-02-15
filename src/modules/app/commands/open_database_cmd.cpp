@@ -1,12 +1,13 @@
 #include "open_database_cmd.hpp"
-#include "../../core/constants.hpp"
-#include "../../core/platform.hpp"
-#include "../../validation/field_validator.hpp"
-#include "../../validation/password_policy.hpp"
-#include "../../storage/file_utils.hpp"
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_database.hpp"
+#include "../../validation/password_policy.hpp"
+#include "../../validation/field_validator.hpp"
+#include "../../storage/file_utils.hpp"
+#include "../../core/constants.hpp"
 #include "../../core/errors.hpp"
+#include <string>
+#include <memory>
 
 namespace app::commands {
 	OpenDatabaseCommand::OpenDatabaseCommand(
@@ -69,7 +70,9 @@ namespace app::commands {
 		term_->show_success(
 			"Database loaded. " +
 			std::to_string(db_->password_record_count()) + " password record(s), " +
-			std::to_string(db_->note_record_count()) + " note record(s) found.");
+			std::to_string(db_->note_record_count()) + " note record(s) found, " +
+			std::to_string(db_->bankcard_record_count()) + " bank card record(s) found, " +
+			std::to_string(db_->discountcard_record_count()) + " discount card record(s) found.");
 		out_db_path = path;
 		out_master_pw = pw;
 		return true;

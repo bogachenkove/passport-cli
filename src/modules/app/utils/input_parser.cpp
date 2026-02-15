@@ -1,6 +1,8 @@
 #include "input_parser.hpp"
-#include <sstream>
 #include <algorithm>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace app::utils {
 	std::vector<std::size_t> parse_record_numbers(const std::string& input,

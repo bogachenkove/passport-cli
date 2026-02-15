@@ -1,6 +1,9 @@
 #include "crypto_service.hpp"
 #include "../core/constants.hpp"
 #include "../core/errors.hpp"
+#include <string>
+#include <vector>
+#include <cstdint>
 #include <sodium.h>
 
 namespace {
@@ -118,5 +121,8 @@ namespace security::crypto {
 		std::vector<std::uint8_t> buf(count);
 		randombytes_buf(buf.data(), count);
 		return buf;
+	}
+	std::uint32_t SodiumCryptoService::random_uniform(std::uint32_t upper_bound) {
+		return randombytes_uniform(upper_bound);
 	}
 }

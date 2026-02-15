@@ -1,19 +1,15 @@
 #include "type_system.hpp"
 #include "../core/constants.hpp"
 #include "../core/errors.hpp"
-#include <cstring>
+#include <string>
 #include <sodium.h>
 
 namespace security::crypto {
-	TypeSystem::TypeSystem(const std::vector<std::uint8_t>& master_seed,
-		const std::vector<std::uint8_t>& context_salt)
-		: master_seed_(master_seed), context_salt_(context_salt) {
+	TypeSystem::TypeSystem(const std::vector<std::uint8_t>& master_seed, const std::vector<std::uint8_t>& context_salt) : master_seed_(master_seed), context_salt_(context_salt) {
 		if (master_seed.size() != core::constants::kMasterSeedBytes ||
 			context_salt.size() != core::constants::kContextSaltBytes) {
 			throw core::errors::TypeSystemError{
-			  "Seed sizes mismatch: expected " +
-			  std::to_string(core::constants::kMasterSeedBytes) + " and " +
-			  std::to_string(core::constants::kContextSaltBytes) + " bytes."
+			  "Seed sizes mismatch: expected " + std::to_string(core::constants::kMasterSeedBytes) + " and " + std::to_string(core::constants::kContextSaltBytes) + " bytes."
 			};
 		}
 	}
@@ -52,6 +48,12 @@ namespace security::crypto {
 	domain::models::RecordType TypeSystem::note_type() const {
 		return derive_type(domain::models::kContextNote);
 	}
+	domain::models::RecordType TypeSystem::bankcard_type() const {
+		return derive_type(domain::models::kContextBankCard);
+	}
+	domain::models::RecordType TypeSystem::discountcard_type() const {
+		return derive_type(domain::models::kContextDiscountCard);
+	}
 	const std::vector<std::uint8_t>& TypeSystem::master_seed() const noexcept {
 		return master_seed_;
 	}
@@ -59,7 +61,6 @@ namespace security::crypto {
 		return context_salt_;
 	}
 	bool TypeSystem::is_initialised() const noexcept {
-		return master_seed_.size() == core::constants::kMasterSeedBytes &&
-			context_salt_.size() == core::constants::kContextSaltBytes;
+		return master_seed_.size() == core::constants::kMasterSeedBytes && context_salt_.size() == core::constants::kContextSaltBytes;
 	}
 }

@@ -1,8 +1,8 @@
 #include "field_validator.hpp"
-
-#include <algorithm>
 #include <cctype>
+#include <algorithm>
 #include <regex>
+#include <string>
 
 namespace domain::validation {
 	bool is_field_empty(const std::string& value) {
@@ -52,5 +52,22 @@ namespace domain::validation {
 		if (input.length() != 1) return false;
 		char c = std::tolower(static_cast<unsigned char>(input[0]));
 		return c == expected1 || c == expected2 || c == 'q';
+	}
+	bool is_digits_only(const std::string& value) {
+		return !value.empty() && std::all_of(value.begin(), value.end(), ::isdigit);
+	}
+	bool is_valid_expiry(const std::string& value) {
+		if (value.size() != 5) return false;
+		if (value[2] != '/') return false;
+		if (!std::isdigit(value[0]) || !std::isdigit(value[1]) ||
+			!std::isdigit(value[3]) || !std::isdigit(value[4])) return false;
+		int month = (value[0] - '0') * 10 + (value[1] - '0');
+		return month >= 1 && month <= 12;
+	}
+	bool is_letters_and_spaces(const std::string& value) {
+		return !value.empty() && std::all_of(value.begin(), value.end(), [](unsigned char c) {
+			return std::isalpha(c) || std::isspace(c);
+			}
+		);
 	}
 }

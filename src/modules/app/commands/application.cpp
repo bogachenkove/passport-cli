@@ -1,13 +1,15 @@
-#include <cctype>
 #include "application.hpp"
-#include "create_database_cmd.hpp"
-#include "open_database_cmd.hpp"
-#include "add_record_cmd.hpp"
-#include "remove_record_cmd.hpp"
-#include "list_records_cmd.hpp"
-#include "../../ui/console_terminal.hpp"
-#include "../../crypto/crypto_service.hpp"
-#include "../../storage/file_database.hpp"
+#include "../../interface/interface_terminal.hpp"
+#include "../../interface/interface_crypto_service.hpp"
+#include "../../interface/interface_database.hpp"
+#include "../commands/create_database_cmd.hpp"
+#include "../commands/open_database_cmd.hpp"
+#include "../commands/list_records_cmd.hpp"
+#include "../commands/add_record_cmd.hpp"
+#include "../commands/remove_record_cmd.hpp"
+#include <cctype>
+#include <memory>
+#include <cstdlib>
 
 namespace app {
 	Application::Application(
@@ -18,7 +20,7 @@ namespace app {
 	void Application::run_startup_menu() {
 		while (!database_ready_) {
 			term_->show_message("What would you like to do?\n");
-			term_->show_message("  [C]reate a new password database");
+			term_->show_message("  [C]reate a new database");
 			term_->show_message("  [O]pen an existing database");
 			term_->show_message("  [Q]uit\n");
 			auto choice = term_->prompt_input("  Your choice: ");

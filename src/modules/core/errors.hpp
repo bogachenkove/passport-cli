@@ -1,7 +1,5 @@
-﻿#pragma once
-
+#pragma once
 #include <stdexcept>
-#include <string>
 
 namespace core::errors {
 	struct PassportError : std::runtime_error {

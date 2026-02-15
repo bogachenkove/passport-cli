@@ -1,6 +1,10 @@
 #include "binary_serializer.hpp"
 #include "../core/endian.hpp"
 #include "../core/errors.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace filesystem::storage::binary_serializer {
 	void write_field(std::vector<std::uint8_t>& out, const std::string& value) {
@@ -21,8 +25,7 @@ namespace filesystem::storage::binary_serializer {
 		offset += 4;
 		if (offset + len > buf.size()) {
 			throw core::errors::DeserialisationError{
-			  "Truncated field: declared length " + std::to_string(len) +
-			  " exceeds available data."
+			  "Truncated field: declared length " + std::to_string(len) + " exceeds available data."
 			};
 		}
 		std::string result(reinterpret_cast<const char*>(buf.data() + offset), len);
@@ -40,12 +43,10 @@ namespace filesystem::storage::binary_serializer {
 		offset += 4;
 		if (offset + len > buf.size()) {
 			throw core::errors::DeserialisationError{
-			  "Truncated field: declared length " + std::to_string(len) +
-			  " exceeds available data."
+			  "Truncated field: declared length " + std::to_string(len) + " exceeds available data."
 			};
 		}
-		std::vector<std::uint8_t> result(buf.begin() + offset,
-			buf.begin() + offset + len);
+		std::vector<std::uint8_t> result(buf.begin() + offset, buf.begin() + offset + len);
 		offset += len;
 		return result;
 	}

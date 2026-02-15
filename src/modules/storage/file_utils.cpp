@@ -1,12 +1,13 @@
 #include "file_utils.hpp"
+#include "../interface/interface_crypto_service.hpp"
+#include "../core/platform.hpp"
 #include "../core/constants.hpp"
 #include "../core/errors.hpp"
-#include "../core/platform.hpp"
 #include <fstream>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
-#include <vector>
-#include <filesystem>
+#include <string>
 
 namespace filesystem::storage {
 	std::string generate_unique_db_filename(
@@ -14,7 +15,7 @@ namespace filesystem::storage {
 		constexpr std::size_t kEntropyBytes = 16;
 		auto random = crypto.random_bytes(kEntropyBytes);
 		std::ostringstream oss;
-		oss << "passport_";
+		oss << "PSRT_";
 		oss << std::hex << std::setfill('0');
 		for (auto byte : random) {
 			oss << std::setw(2) << static_cast<unsigned>(byte);

@@ -1,9 +1,9 @@
 #pragma once
-
-#include "../models/record_types.hpp"
 #include "../interface/interface_crypto_service.hpp"
-#include <vector>
+#include "../models/record_types.hpp"
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace security::crypto {
 	class TypeSystem {
@@ -14,6 +14,8 @@ namespace security::crypto {
 		[[nodiscard]] domain::models::RecordType derive_type(const std::string& context_string) const;
 		[[nodiscard]] domain::models::RecordType password_type() const;
 		[[nodiscard]] domain::models::RecordType note_type() const;
+		[[nodiscard]] domain::models::RecordType bankcard_type() const;
+		[[nodiscard]] domain::models::RecordType discountcard_type() const;
 		[[nodiscard]] const std::vector<std::uint8_t>& master_seed() const noexcept;
 		[[nodiscard]] const std::vector<std::uint8_t>& context_salt() const noexcept;
 		[[nodiscard]] bool is_initialised() const noexcept;

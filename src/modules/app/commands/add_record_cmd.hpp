@@ -1,10 +1,11 @@
 #pragma once
-
 #include "../../interface/interface_database.hpp"
 #include "../../interface/interface_terminal.hpp"
-#include <memory>
 #include "../../models/password_record.hpp"
 #include "../../models/note_record.hpp"
+#include "../../models/bank_card_record.hpp"
+#include "../../models/discount_card_record.hpp"
+#include <memory>
 
 namespace app::commands {
 	class AddRecordCommand {
@@ -18,5 +19,7 @@ namespace app::commands {
 		std::shared_ptr<domain::interfaces::IDatabase> db_;
 		domain::models::PasswordRecord prompt_password_record();
 		domain::models::NoteRecord prompt_note_record();
+		domain::models::BankCardRecord prompt_bankcard_record();
+		domain::models::DiscountCardRecord prompt_discountcard_record();
 	};
 }

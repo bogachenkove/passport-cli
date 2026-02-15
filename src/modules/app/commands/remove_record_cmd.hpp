@@ -1,7 +1,6 @@
 #pragma once
-
-#include "../../interface/interface_database.hpp"
 #include "../../interface/interface_terminal.hpp"
+#include "../../interface/interface_database.hpp"
 #include <memory>
 
 namespace app::commands {
@@ -16,5 +15,7 @@ namespace app::commands {
 		std::shared_ptr<domain::interfaces::IDatabase> db_;
 		void remove_password_records();
 		void remove_note_records();
+		void remove_bankcard_records();
+		void remove_discountcard_records();
 	};
 }

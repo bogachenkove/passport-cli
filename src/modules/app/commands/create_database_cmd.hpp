@@ -1,7 +1,6 @@
 #pragma once
-
-#include "../../interface/interface_database.hpp"
 #include "../../interface/interface_terminal.hpp"
+#include "../../interface/interface_database.hpp"
 #include "../../interface/interface_crypto_service.hpp"
 #include <memory>
 #include <string>
