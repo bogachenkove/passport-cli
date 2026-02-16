@@ -6,18 +6,22 @@
 # =============================================================================
 
 cmake_minimum_required(VERSION 3.15)
-project(passport-cli VERSION 0.0.1 LANGUAGES CXX)
+
+# ---- Project definition ----
+# Define the project name, version, and language.
+# The version here is a fallback; actual metadata will be taken from metadata.hpp.
+project(passport-cli LANGUAGES CXX)
 
 # ---- Compiler settings ----
-# Force C++20 standard, require it, and disable compiler extensions
-# to ensure consistent behaviour across different compilers.
+# Force C++20 standard, require it, and disable compiler extensions.
+# This ensures consistent behavior across different compilers.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ---- Source directory ----
 # The source code is located one level above the build folder,
-# in a directory named "source". We store the absolute path for later use.
+# in a directory named "source". Store the absolute path for later use.
 set(SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../source")
 
 # ---- Find libsodium (required for encryption) ----
@@ -49,6 +53,34 @@ if(NOT Sodium_FOUND)
     endif()
 endif()
 
+# ---- Extract metadata from metadata.hpp ----
+# Path to the version header (adjust if necessary)
+set(VERSION_H "${SOURCE_DIR}/core/metadata.hpp")
+
+# Read the entire version header file into a variable.
+file(READ "${VERSION_H}" VERSION_CONTENT)
+
+# Helper function to extract a string macro value.
+# Searches for lines like: #define NAME "value" and returns the quoted string.
+function(get_version_macro name output)
+    string(REGEX MATCH "#define[ \t]+${name}[ \t]+\"([^\"]*)\"" match "${VERSION_CONTENT}")
+    if(CMAKE_MATCH_1)
+        set(${output} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+    else()
+        set(${output} "" PARENT_SCOPE)
+    endif()
+endfunction()
+
+# Extract all needed metadata fields.
+get_version_macro("ProductName" PRODUCT_NAME)
+get_version_macro("FileDescription" FILE_DESCRIPTION)
+get_version_macro("ProductVersion" PRODUCT_VERSION)
+get_version_macro("License" LICENSE)
+get_version_macro("Copyright" COPYRIGHT)
+get_version_macro("Author" AUTHOR)
+get_version_macro("Contact" CONTACT)
+get_version_macro("Homepage" HOMEPAGE)
+
 # ---- Gather all source files ----
 # Recursively collect every .cpp file inside SOURCE_DIR.
 # Using GLOB is convenient, but note that CMake will not automatically
@@ -57,6 +89,19 @@ file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp")
 
 # ---- Create the executable ----
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+# ---- Pass metadata as compile definitions ----
+# These definitions can be used in the source code (e.g., for --version output).
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    PRODUCT_NAME="${PRODUCT_NAME}"
+    FILE_DESCRIPTION="${FILE_DESCRIPTION}"
+    PRODUCT_VERSION="${PRODUCT_VERSION}"
+    LICENSE="${LICENSE}"
+    COPYRIGHT="${COPYRIGHT}"
+    AUTHOR="${AUTHOR}"
+    CONTACT="${CONTACT}"
+    HOMEPAGE="${HOMEPAGE}"
+)
 
 # ---- Set include directories ----
 # Tell the compiler where to look for header files.

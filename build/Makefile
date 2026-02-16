@@ -8,8 +8,10 @@
 TARGET = passport-cli
 
 # ---- Directories ----
-SRC_DIR = ../source               # Location of source files (relative to this Makefile)
-OBJ_DIR = .                        # Object files will be placed in the current directory
+# Location of source files (relative to this Makefile)
+SRC_DIR = ../source
+# Object files will be placed in the current directory
+OBJ_DIR = .
 
 # ---- Find all C++ source files ----
 # Recursively locate every .cpp file inside SRC_DIR.
@@ -24,7 +26,7 @@ SOURCES = $(shell find $(SRC_DIR) -name "*.cpp")
 # For a production build, you would preserve the directory structure.
 OBJECTS = $(notdir $(SOURCES:.cpp=.o))
 
-# ---- Compiler and flags ----
+# ---- Compiler and base flags ----
 CXX = g++                           # The C++ compiler
 CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic   # C++20 standard and warnings
 CXXFLAGS += -I$(SRC_DIR) -I$(SRC_DIR)/modules   # Include paths for headers
@@ -52,6 +54,37 @@ else
         LIBS += -lsodium
     endif
 endif
+
+# ---- Extract metadata from metadata.hpp ----
+# The version header contains product information in #define macros.
+VERSION_H = $(SRC_DIR)/core/metadata.hpp
+
+# Helper shell function to extract a quoted macro value.
+# Example: #define ProductName "passport-cli" -> passport-cli
+define get_version_macro
+$(shell grep -E "#define[[:space:]]+$(1)[[:space:]]+\".*\"" $(VERSION_H) | sed -E 's/#define[[:space:]]+$(1)[[:space:]]+\"([^\"]*)\".*/\1/')
+endef
+
+# Extract all metadata fields
+PRODUCT_NAME     := $(call get_version_macro,ProductName)
+FILE_DESCRIPTION := $(call get_version_macro,FileDescription)
+PRODUCT_VERSION  := $(call get_version_macro,ProductVersion)
+LICENSE          := $(call get_version_macro,License)
+COPYRIGHT        := $(call get_version_macro,Copyright)
+AUTHOR           := $(call get_version_macro,Author)
+CONTACT          := $(call get_version_macro,Contact)
+HOMEPAGE         := $(call get_version_macro,Homepage)
+
+# Add metadata as preprocessor definitions (-D) so they can be used in code.
+CXXFLAGS += \
+    -DPRODUCT_NAME=\"$(PRODUCT_NAME)\" \
+    -DFILE_DESCRIPTION=\"$(FILE_DESCRIPTION)\" \
+    -DPRODUCT_VERSION=\"$(PRODUCT_VERSION)\" \
+    -DLICENSE=\"$(LICENSE)\" \
+    -DCOPYRIGHT=\"$(COPYRIGHT)\" \
+    -DLEGAL_COPYRIGHT=\"$(LEGAL_COPYRIGHT)\" \
+    -DCONTACT=\"$(CONTACT)\" \
+    -DHOMEPAGE=\"$(HOMEPAGE)\"
 
 # ---- VPATH: tell make where to look for source files ----
 # Since source files are scattered in subdirectories, we list all possible
