@@ -1,10 +1,13 @@
 #!/usr/bin/env python
-"""
-Verify GPG detached signatures for SHA256 and BLAKE2b checksum files.
-This script imports a public key, then checks the authenticity of
-the previously generated .asc signature files.
-"""
 
+"""
+    Script name: authenticate.py
+    Script description: Authenticate checksum files by verifying GPG signatures.
+                        This script imports a public key and verifies detached signatures for SHA256 and BLAKE2b checksum files.
+    Author: Bogachenko Vyacheslav <bogachenkove@outlook.com>
+    License: MIT license <https://raw.githubusercontent.com/bogachenkove/passport-cli/master/LICENSE.md>
+    Last update: February 2026
+"""
 import subprocess
 from pathlib import Path
 import sys
@@ -12,35 +15,37 @@ import sys
 # Directory where this script resides.
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Expected location of the public key file.
+# Default public key file path.
 DEFAULT_PUBKEY = SCRIPT_DIR / "publickey.asc"
 
-# Paths for SHA256 checksum and its signature.
+# Directory for SHA256-related files.
 OUTPUT_DIR_SHA256 = SCRIPT_DIR / "SHA256"
 SHA256_SUMS = OUTPUT_DIR_SHA256 / "SHA256SUMS"
 SHA256_ASC = OUTPUT_DIR_SHA256 / "SHA256SUMS.asc"
 
-# Paths for BLAKE2b checksum and its signature.
+# Directory for BLAKE2b-related files.
 OUTPUT_DIR_BLAKE2B = SCRIPT_DIR / "BLAKE2b"
 BLAKE2B_SUMS = OUTPUT_DIR_BLAKE2B / "BLAKE2BSUMS"
 BLAKE2B_ASC = OUTPUT_DIR_BLAKE2B / "BLAKE2BSUMS.asc"
 
 
 def get_public_key_path() -> Path:
-    """Obtain the path to the public key file.
-    If the default 'publickey.asc' exists, use it.
-    Otherwise, repeatedly prompt the user for a valid file path."""
-    # Use the default key if it is already present in the script directory.
+    """
+    Retrieve public key path.
+    If the default publickey.asc exists, use it.
+    Otherwise, prompt the user to enter a valid file path repeatedly until a file is found.
+    """
+    # Use default key if present.
     if DEFAULT_PUBKEY.exists():
         print(f"[INFO] Using default public key: {DEFAULT_PUBKEY}")
         return DEFAULT_PUBKEY
 
-    # Warn the user and ask for a custom location.
+    # Notify user default is missing and request custom path.
     print(f"[WARNING] Default public key not found: {DEFAULT_PUBKEY}")
     while True:
         user_input = input("Please enter the full path to your public key file (publickey.asc): ").strip()
         if not user_input:
-            continue  # Empty input – ask again.
+            continue  # Skip empty input.
         path = Path(user_input).expanduser().resolve()
         if path.exists():
             return path
@@ -48,23 +53,27 @@ def get_public_key_path() -> Path:
 
 
 def import_key(key_path: Path) -> bool:
-    """Import the public key into the local GPG keyring.
-    Returns True on success, False on failure."""
+    """
+    Import public key into GPG keyring.
+    Executes gpg --import on the provided file. Returns True if import succeeds, False on failure.
+    """
     try:
-        # Run gpg --import, capturing output to avoid cluttering the console.
+        # Run GPG import silently, capturing output.
         subprocess.run(["gpg", "--import", str(key_path)], check=True, capture_output=True, text=True)
         print(f"[OK] Public key imported from: {key_path}")
         return True
     except subprocess.CalledProcessError as e:
-        # Show the error message from GPG to help the user diagnose the problem.
+        # Show GPG's error message for diagnosis.
         print(f"[ERROR] Failed to import public key:\n{e.stderr}")
         return False
 
 
 def verify_signature(asc_file: Path, data_file: Path) -> bool:
-    """Verify a detached GPG signature.
-    Returns True if the signature is valid, False otherwise."""
-    # Ensure both required files exist before invoking GPG.
+    """
+    Verify detached GPG signature.
+    Checks that both files exist, then runs gpg --verify. Returns True for valid signature.
+    """
+    # Verify prerequisite files exist.
     if not asc_file.exists():
         print(f"[ERROR] Signature file not found: {asc_file}")
         return False
@@ -73,7 +82,7 @@ def verify_signature(asc_file: Path, data_file: Path) -> bool:
         return False
 
     try:
-        # --verify expects the signature file first, then the signed data.
+        # Execute GPG verification with signature first, then data.
         subprocess.run(
             ["gpg", "--verify", str(asc_file), str(data_file)],
             check=True,
@@ -83,29 +92,34 @@ def verify_signature(asc_file: Path, data_file: Path) -> bool:
         print(f"[OK] Valid signature for {data_file.name}")
         return True
     except subprocess.CalledProcessError as e:
-        # Print GPG's stderr to give detailed failure reason.
+        # Output GPG error details.
         print(f"[ERROR] Signature verification failed for {data_file.name}:\n{e.stderr}")
         return False
 
 
 def main():
-    # 1. Obtain and import the public key.
+    """
+    Orchestrate signature verification.
+    Steps: obtain and import public key, verify SHA256 and BLAKE2b signatures, report overall status.
+    """
+    # Step 1: Get and import public key.
     pubkey_path = get_public_key_path()
     if not import_key(pubkey_path):
-        sys.exit(1)  # Cannot proceed without a trusted public key.
+        sys.exit(1)  # Exit if key import fails.
 
-    # 2. Verify both signatures.
+    # Step 2: Verify both signature files.
     results = []
     results.append(verify_signature(SHA256_ASC, SHA256_SUMS))
     results.append(verify_signature(BLAKE2B_ASC, BLAKE2B_SUMS))
 
-    # 3. Report overall status.
+    # Step 3: Report final outcome.
     if all(results):
         print("\n[SUCCESS] All signatures are valid.")
     else:
         print("\n[FAILURE] One or more signatures are invalid.")
-        sys.exit(1)  # Exit with error code to indicate failure in automated environments.
+        sys.exit(1)
 
 
+# Execute main function when script is run directly.
 if __name__ == "__main__":
     main()

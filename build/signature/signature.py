@@ -1,7 +1,12 @@
 #!/usr/bin/env python
+
 """
-Sign the generated SHA256 and BLAKE2b checksum files using GPG,
-creating detached ASCII-armored signatures (.asc files).
+    Script name: signature.py
+    Script description: Sign checksum files with GPG detached signatures.
+                        This script creates ASCII-armored detached signatures (.asc) for the SHA256 and BLAKE2b checksum files.
+    Author: Bogachenko Vyacheslav <bogachenkove@outlook.com>
+    License: MIT license <https://raw.githubusercontent.com/bogachenkove/passport-cli/master/LICENSE.md>
+    Last update: February 2026
 """
 
 import subprocess
@@ -11,34 +16,36 @@ import sys
 # Directory where this script resides.
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Paths for SHA256 checksum file and its expected signature.
+# Directory for SHA256-related files.
 OUTPUT_DIR_SHA256 = SCRIPT_DIR / "SHA256"
 OUTPUT_FILE_SHA256 = OUTPUT_DIR_SHA256 / "SHA256SUMS"
 OUTPUT_FILE_SHA256_ASC = OUTPUT_FILE_SHA256.with_suffix(".asc")
 
-# Paths for BLAKE2b checksum file and its expected signature.
+# Directory for BLAKE2b-related files.
 OUTPUT_DIR_BLAKE2B = SCRIPT_DIR / "BLAKE2b"
 OUTPUT_FILE_BLAKE2B = OUTPUT_DIR_BLAKE2B / "BLAKE2BSUMS"
 OUTPUT_FILE_BLAKE2B_ASC = OUTPUT_FILE_BLAKE2B.with_suffix(".asc")
 
 
 def sign_file(file_path: Path, key_id: str = None):
-    """Sign a file with GPG (detached ASCII signature).
-    Creates a .asc file alongside the original.
-    If key_id is provided, it selects a specific GPG key."""
-    # Abort if the file to be signed does not exist.
+    """
+    Create detached GPG signature for a file.
+    Generates an ASCII-armored .asc file alongside the original. Optionally specify a key ID.
+    Returns True on success, False on failure.
+    """
+    # Check that the file to sign exists.
     if not file_path.exists():
         print(f"[ERROR] File not found: {file_path}")
         return False
 
-    # Build the GPG command: armor, detached signature, optional key selection.
+    # Build GPG command: armor, detached sign, optional key selection.
     cmd = ["gpg", "--armor", "--detach-sign"]
     if key_id:
         cmd.extend(["--local-user", key_id])
     cmd.append(str(file_path))
 
     try:
-        # Execute the GPG command and check for success.
+        # Execute GPG signing.
         subprocess.run(cmd, check=True)
         print(f"[OK] Signed: {file_path} -> {file_path}.asc")
         return True
@@ -48,12 +55,17 @@ def sign_file(file_path: Path, key_id: str = None):
 
 
 def main():
-    # Sign the SHA256 checksum file.
-    sign_file(OUTPUT_FILE_SHA256)
+    """
+    Sign both checksum files.
+    Invokes sign_file for SHA256 and BLAKE2b checksum files.
+    """
+    key_id = sys.argv[1] if len(sys.argv) > 1 else None
+    success_sha = sign_file(OUTPUT_FILE_SHA256, key_id)
+    success_blake = sign_file(OUTPUT_FILE_BLAKE2B, key_id)
+    if not (success_sha and success_blake):
+        sys.exit(1)
 
-    # Sign the BLAKE2b checksum file.
-    sign_file(OUTPUT_FILE_BLAKE2B)
 
-
+# Execute main function when script is run directly.
 if __name__ == "__main__":
     main()
