@@ -54,6 +54,9 @@ namespace security::crypto {
 	domain::models::RecordType TypeSystem::discountcard_type() const {
 		return derive_type(domain::models::kContextDiscountCard);
 	}
+	domain::models::RecordType TypeSystem::transportcard_type() const {
+		return derive_type(domain::models::kContextTransportCard);
+	}
 	const std::vector<std::uint8_t>& TypeSystem::master_seed() const noexcept {
 		return master_seed_;
 	}

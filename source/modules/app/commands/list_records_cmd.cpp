@@ -20,6 +20,7 @@ namespace app::commands {
 		term_->show_message("  [B]ank Cards");
 		term_->show_message("  [N]otes");
 		term_->show_message("  [D]iscount Cards");
+		term_->show_message("  [T]ransport Cards");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -41,12 +42,16 @@ namespace app::commands {
 				ui::display_discountcard_records(*db_, term_);
 				return;
 			}
+			else if (key == 't') {
+				ui::display_transportcard_records(*db_, term_);
+				return;
+			}
 			else if (key == 'q') {
 				term_->show_message("Operation cancelled.");
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, B, N, D, or Q.");
+				term_->show_error("Invalid option. Please press P, B, N, D, T, or Q.");
 			}
 		}
 	}

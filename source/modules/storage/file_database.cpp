@@ -29,6 +29,7 @@ namespace security::storage {
 		const auto note_type = type_system_.note_type();
 		const auto bank_type = type_system_.bankcard_type();
 		const auto disc_type = type_system_.discountcard_type();
+		const auto trans_type = type_system_.transportcard_type();
 		for (const auto& r : password_records_) {
 			buf.insert(buf.end(), pw_type.begin(), pw_type.end());
 			core::endian::append_u64_be(buf, r.date);
@@ -61,6 +62,16 @@ namespace security::storage {
 			filesystem::storage::binary_serializer::write_field(buf, r.store_name);
 			filesystem::storage::binary_serializer::write_field(buf, r.note);
 		}
+		for (const auto& r : transport_records_) {
+			buf.insert(buf.end(), trans_type.begin(), trans_type.end());
+			core::endian::append_u64_be(buf, r.date);
+			filesystem::storage::binary_serializer::write_field(buf, r.card_number);
+			filesystem::storage::binary_serializer::write_field(buf, r.barcode);
+			filesystem::storage::binary_serializer::write_field(buf, r.expiry);
+			filesystem::storage::binary_serializer::write_field(buf, r.holder);
+			filesystem::storage::binary_serializer::write_field(buf, r.cvv);
+			filesystem::storage::binary_serializer::write_field(buf, r.note);
+		}
 		return buf;
 	}
 	void FileDatabase::deserialize_records(const std::vector<std::uint8_t>& plaintext) {
@@ -68,6 +79,7 @@ namespace security::storage {
 		note_records_.clear();
 		bankcard_records_.clear();
 		discount_records_.clear();
+		transport_records_.clear();
 		if (plaintext.empty()) {
 			type_system_.generate_seeds(*crypto_);
 			return;
@@ -93,6 +105,7 @@ namespace security::storage {
 		const auto note_type = type_system_.note_type();
 		const auto bank_type = type_system_.bankcard_type();
 		const auto disc_type = type_system_.discountcard_type();
+		const auto trans_type = type_system_.transportcard_type();
 		while (offset < plaintext.size()) {
 			if (offset + 32 > plaintext.size()) {
 				throw core::errors::DeserialisationError{
@@ -161,6 +174,23 @@ namespace security::storage {
 				rec.store_name = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
 				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
 				discount_records_.push_back(std::move(rec));
+			}
+			else if (sodium_memcmp(tag.data(), trans_type.data(), tag.size()) == 0) {
+				if (offset + 8 > plaintext.size()) {
+					throw core::errors::DeserialisationError{
+					  "Truncated TransportCardRecord: not enough bytes for date field."
+					};
+				}
+				domain::models::TransportCardRecord rec;
+				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
+				offset += 8;
+				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.barcode = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.expiry = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.holder = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.cvv = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				transport_records_.push_back(std::move(rec));
 			}
 			else {
 				throw core::errors::DeserialisationError{
@@ -339,8 +369,25 @@ namespace security::storage {
 	std::size_t FileDatabase::discountcard_record_count() const noexcept {
 		return discount_records_.size();
 	}
+	void FileDatabase::add_transportcard_record(domain::models::TransportCardRecord record) {
+		if (record.date == 0) record.date = unix_timestamp_now();
+		transport_records_.push_back(std::move(record));
+	}
+	bool FileDatabase::remove_transportcard_record(std::size_t index) {
+		if (index >= transport_records_.size()) return false;
+		transport_records_.erase(transport_records_.begin() +
+			static_cast<std::ptrdiff_t>(index));
+		return true;
+	}
+	const std::vector<domain::models::TransportCardRecord>&
+		FileDatabase::transportcard_records() const noexcept {
+		return transport_records_;
+	}
+	std::size_t FileDatabase::transportcard_record_count() const noexcept {
+		return transport_records_.size();
+	}
 	std::size_t FileDatabase::record_count() const noexcept {
-		return password_records_.size() + note_records_.size() + bankcard_records_.size() + discount_records_.size();
+		return password_records_.size() + note_records_.size() + bankcard_records_.size() + discount_records_.size() + transport_records_.size();
 	}
 	std::uint64_t FileDatabase::timestamp_created() const noexcept {
 		return ts_created_;

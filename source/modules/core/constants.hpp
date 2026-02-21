@@ -50,6 +50,16 @@ namespace core::constants {
 	inline constexpr std::size_t kStoreNameMaxLength_DiscountCard = 30;
 	inline constexpr std::size_t kNoteMinLength_DiscountCard = 5;
 	inline constexpr std::size_t kNoteMaxLength_DiscountCard = 30;
+	inline constexpr std::size_t kCardNumberMinLength_TransportCard = 8;
+	inline constexpr std::size_t kCardNumberMaxLength_TransportCard = 16;
+	inline constexpr std::size_t kBarCodeMinLength_TransportCard = 6;
+	inline constexpr std::size_t kBarCodeMaxLength_TransportCard = 13;
+	inline constexpr std::size_t kCVVMinLength_TransportCard = 3;
+	inline constexpr std::size_t kCVVMaxLength_TransportCard = 4;
+	inline constexpr std::size_t kHolderMinLength_TransportCard = 4;
+	inline constexpr std::size_t kHolderMaxLength_TransportCard = 30;
+	inline constexpr std::size_t kNoteMinLength_TransportCard = 5;
+	inline constexpr std::size_t kNoteMaxLength_TransportCard = 30;
 	inline constexpr const char* kLowercaseChars = "abcdefghijklmnopqrstuvwxyz";
 	inline constexpr const char* kUppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	inline constexpr const char* kDigitChars = "0123456789";

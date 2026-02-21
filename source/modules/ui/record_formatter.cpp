@@ -210,4 +210,68 @@ namespace ui {
 		}
 		term->show_message("\n  Total discount card records: " + std::to_string(records.size()));
 	}
+	void display_transportcard_records(
+		const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+		const auto& records = db.transportcard_records();
+		if (records.empty()) {
+			term->show_message("\n  No transport card records to display.");
+			return;
+		}
+		constexpr std::size_t kDateColWidth = 16;
+		std::size_t w_num = 5;
+		std::size_t w_barcode = 6;
+		std::size_t w_expiry = 5;
+		std::size_t w_cvv = 3;
+		std::size_t w_holder = 10;
+		std::size_t w_note = 5;
+		for (const auto& r : records) {
+			auto num = format_field(r.card_number);
+			auto barcode = format_field(r.barcode);
+			auto expiry = format_field(r.expiry);
+			auto cvv = format_field(r.cvv);
+			auto holder = format_field(r.holder);
+			auto note = format_field(r.note);
+			if (num.size() > w_num)     w_num = num.size();
+			if (barcode.size() > w_barcode) w_barcode = barcode.size();
+			if (expiry.size() > w_expiry)  w_expiry = expiry.size();
+			if (cvv.size() > w_cvv)     w_cvv = cvv.size();
+			if (holder.size() > w_holder)  w_holder = holder.size();
+			if (note.size() > w_note)    w_note = note.size();
+		}
+		std::ostringstream header;
+		header << "\n  --- Transport Card Records (* = required) ---\n\n";
+		header << "  "
+			<< std::left
+			<< std::setw(5) << "#"
+			<< std::setw(kDateColWidth + 3) << "Date"
+			<< std::setw(w_num + 3) << "Card Number*"
+			<< std::setw(w_barcode + 3) << "Barcode*"
+			<< std::setw(w_expiry + 3) << "Expiry"
+			<< std::setw(w_cvv + 3) << "CVV"
+			<< std::setw(w_holder + 3) << "Holder"
+			<< std::setw(w_note + 3) << "Note"
+			<< '\n';
+		std::size_t total_w = 5 + (kDateColWidth + 3) + (w_num + 3) + (w_barcode + 3) +
+			(w_expiry + 3) + (w_cvv + 3) + (w_holder + 3) + (w_note + 3);
+		header << "  " << std::string(total_w, '-');
+		term->show_message(header.str());
+		for (std::size_t i = 0;
+			i < records.size();
+			++i) {
+			const auto& r = records[i];
+			std::ostringstream row;
+			row << "  "
+				<< std::left
+				<< std::setw(5) << (i + 1)
+				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
+				<< std::setw(w_num + 3) << format_field(r.card_number)
+				<< std::setw(w_barcode + 3) << format_field(r.barcode)
+				<< std::setw(w_expiry + 3) << format_field(r.expiry)
+				<< std::setw(w_cvv + 3) << format_field(r.cvv)
+				<< std::setw(w_holder + 3) << format_field(r.holder)
+				<< std::setw(w_note + 3) << format_field(r.note);
+			term->show_message(row.str());
+		}
+		term->show_message("\n  Total transport card records: " + std::to_string(records.size()));
+	}
 }

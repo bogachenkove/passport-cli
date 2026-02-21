@@ -8,4 +8,5 @@ namespace ui {
 	void display_note_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_bankcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_discountcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
+	void display_transportcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 }

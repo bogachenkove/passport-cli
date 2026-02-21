@@ -5,6 +5,7 @@
 #include "../../models/note_record.hpp"
 #include "../../models/bank_card_record.hpp"
 #include "../../models/discount_card_record.hpp"
+#include "../../models/transport_card_record.hpp"
 #include <memory>
 
 namespace app::commands {
@@ -21,5 +22,6 @@ namespace app::commands {
 		domain::models::NoteRecord prompt_note_record();
 		domain::models::BankCardRecord prompt_bankcard_record();
 		domain::models::DiscountCardRecord prompt_discountcard_record();
+		domain::models::TransportCardRecord prompt_transportcard_record();
 	};
 }

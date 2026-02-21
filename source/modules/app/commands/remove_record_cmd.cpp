@@ -137,6 +137,38 @@ namespace app::commands {
 			term_->show_error("No records were removed.");
 		}
 	}
+	void RemoveRecordCommand::remove_transportcard_records() {
+		if (db_->transportcard_record_count() == 0) {
+			term_->show_message("No transport card records to remove.");
+			return;
+		}
+		ui::display_transportcard_records(*db_, term_);
+		auto input = term_->prompt_input(
+			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		auto indices = app::utils::parse_record_numbers(input, db_->transportcard_record_count());
+
+		if (indices.empty()) {
+			if (input.find('0') != std::string::npos)
+				term_->show_message("Removal cancelled.");
+			else
+				term_->show_error("No valid records to remove.");
+			return;
+		}
+		int removed = 0;
+		for (std::size_t idx : indices) {
+			if (db_->remove_transportcard_record(idx))
+				++removed;
+		}
+		if (removed > 0) {
+			if (removed == 1)
+				term_->show_success("1 transport card record removed.");
+			else
+				term_->show_success(std::to_string(removed) + " transport card records removed.");
+		}
+		else {
+			term_->show_error("No records were removed.");
+		}
+	}
 	void RemoveRecordCommand::execute() {
 		if (db_->record_count() == 0) {
 			term_->show_message("The database is empty. Nothing to remove.");
@@ -147,6 +179,7 @@ namespace app::commands {
 		term_->show_message("  [B]ank Card");
 		term_->show_message("  [N]ote");
 		term_->show_message("  [D]iscount Card");
+		term_->show_message("  [T]ransport Card");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -168,12 +201,16 @@ namespace app::commands {
 				remove_discountcard_records();
 				return;
 			}
+			else if (key == 't') {
+				remove_transportcard_records();
+				return;
+			}
 			else if (key == 'q') {
 				term_->show_message("Operation cancelled.");
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, B, N, D, or Q.");
+				term_->show_error("Invalid option. Please press P, B, N, D, T, or Q.");
 			}
 		}
 	}
