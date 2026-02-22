@@ -1,7 +1,11 @@
 #include "add_record_cmd.hpp"
 #include "../../validation/field_validator.hpp"
 #include "../../core/constants.hpp"
+#include "../../validation/unicode.hpp"
+#include "../../storage/mnemonicwordslists.hpp"
+#include <map>
 #include <cctype>
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <ctime>
@@ -517,13 +521,157 @@ namespace app::commands {
 		}
 		return rec;
 	}
+	domain::models::MnemonicPhraseRecord AddRecordCommand::prompt_mnemonicphrase_record() {
+		domain::models::MnemonicPhraseRecord rec;
+		term_->show_message("\n  --- Add New Mnemonic Phrase Record (* = required) ---\n");
+		std::string lang;
+		const std::map<std::string, const std::vector<std::string>*> lang_map = {
+		  {"english", &english_wordlist},
+		  {"chinese_simplified", &chinese_simplified_wordlist},
+		  {"chinese_traditional", &chinese_traditional_wordlist},
+		  {"czech", &czech_wordlist},
+		  {"french", &french_wordlist},
+		  {"italian", &italian_wordlist},
+		  {"japanese", &japanese_wordlist},
+		  {"korean", &korean_wordlist},
+		  {"portuguese", &portuguese_wordlist},
+		  {"spanish", &spanish_wordlist},
+		  {"turkish", &turkish_wordlist}
+		};
+		while (true) {
+			term_->show_message("  Supported languages:");
+			std::string lang_list;
+			for (const auto& pair : lang_map) {
+				lang_list += pair.first + " ";
+			}
+			term_->show_message("    " + lang_list);
+			lang = term_->prompt_input("  Language*: ");
+			std::transform(lang.begin(), lang.end(), lang.begin(),
+				[](unsigned char c) {
+					return std::tolower(c);
+				}
+			);
+			if (lang_map.find(lang) != lang_map.end()) break;
+			term_->show_error("Invalid language. Please choose from the list.");
+		}
+		while (true) {
+			std::string val_str = term_->prompt_input("  Word count* (12, 15, 18, 21, 24): ");
+			try {
+				std::size_t val = std::stoul(val_str);
+				bool valid = false;
+				for (auto c : core::constants::kValidMnemonicWordCounts) {
+					if (val == c) {
+						rec.value = val;
+						valid = true;
+						break;
+					}
+				}
+				if (valid) break;
+			}
+			catch (...) {
+			}
+			term_->show_error("Invalid word count. Must be one of: 12, 15, 18, 21, 24.");
+		}
+		const auto& wordlist = *lang_map.at(lang);
+		rec.mnemonic.reserve(rec.value);
+		for (std::size_t i = 0;
+			i < rec.value;
+			++i) {
+			while (true) {
+				std::string word = term_->prompt_input("  Word " + std::to_string(i + 1) + ": ");
+				size_t start = word.find_first_not_of(" \t\r\n");
+				if (start != std::string::npos) {
+					word = word.substr(start);
+				}
+				else {
+					word.clear();
+				}
+				size_t end = word.find_last_not_of(" \t\r\n");
+				if (end != std::string::npos) {
+					word = word.substr(0, end + 1);
+				}
+				if (word.empty()) {
+					term_->show_error("Word cannot be empty.");
+					continue;
+				}
+				std::string normalized_word = domain::validation::normalize_nfkd(word);
+				bool found = false;
+				for (const auto& dict_word : wordlist) {
+					if (domain::validation::normalize_nfkd(dict_word) == normalized_word) {
+						found = true;
+						break;
+					}
+				}
+				if (found) {
+					rec.mnemonic.push_back(normalized_word);
+					break;
+				}
+				else {
+					term_->show_error("Invalid word. Not in the BIP39 " + lang + " wordlist.");
+				}
+			}
+		}
+		while (true) {
+			std::string pp = term_->prompt_input("  Passphrase (optional, 1-100 chars, leave empty for ---): ");
+			if (domain::validation::is_field_empty(pp)) {
+				rec.passphrase.clear();
+				break;
+			}
+			pp = domain::validation::normalize_nfkd(pp);
+			if (domain::validation::is_ascii_field_valid(pp,
+				core::constants::kPassphraseMinLength_MnemonicPhrase,
+				core::constants::kPassphraseMaxLength_MnemonicPhrase, true)) {
+				rec.passphrase = pp;
+				break;
+			}
+			term_->show_error("If provided, passphrase must be 1-100 printable ASCII characters.");
+		}
+		while (true) {
+			std::string iter_str = term_->prompt_input("  Iteration (optional, " +
+				std::to_string(core::constants::kIterationMin_MnemonicPhrase) + "-" +
+				std::to_string(core::constants::kIterationMax_MnemonicPhrase) +
+				", default 2048, leave empty for default): ");
+			if (domain::validation::is_field_empty(iter_str)) {
+				rec.iteration = core::constants::kIterationMin_MnemonicPhrase;
+				break;
+			}
+			try {
+				std::uint32_t iter = static_cast<std::uint32_t>(std::stoul(iter_str));
+				if (iter >= core::constants::kIterationMin_MnemonicPhrase &&
+					iter <= core::constants::kIterationMax_MnemonicPhrase) {
+					rec.iteration = iter;
+					break;
+				}
+			}
+			catch (...) {
+			}
+			term_->show_error("Invalid iteration. Must be a number between " +
+				std::to_string(core::constants::kIterationMin_MnemonicPhrase) + " and " +
+				std::to_string(core::constants::kIterationMax_MnemonicPhrase) + ".");
+		}
+		while (true) {
+			std::string note = term_->prompt_input("  Note (optional, 5-30 ASCII, leave empty for ---): ");
+			if (domain::validation::is_field_empty(note)) {
+				rec.note.clear();
+				break;
+			}
+			if (domain::validation::is_ascii_field_valid(note,
+				core::constants::kNoteMinLength_MnemonicPhrase,
+				core::constants::kNoteMaxLength_MnemonicPhrase, true)) {
+				rec.note = note;
+				break;
+			}
+			term_->show_error("If provided, note must be 5-30 printable ASCII characters.");
+		}
+		rec.language = lang;
+		return rec;
+	}
 	void AddRecordCommand::execute() {
 		term_->show_message("\nWhat type of record would you like to add?");
 		term_->show_message("  [P]assword");
-		term_->show_message("  [B]ank Card");
+		term_->show_message("  [C]ards");
+		term_->show_message("  [M]nemonic phrase");
 		term_->show_message("  [N]ote");
-		term_->show_message("  [D]iscount Card");
-		term_->show_message("  [T]ransport Card");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -535,36 +683,60 @@ namespace app::commands {
 				term_->show_success("Password record added successfully.");
 				return;
 			}
+			else if (key == 'm') {
+				auto rec = prompt_mnemonicphrase_record();
+				db_->add_mnemonicphrase_record(std::move(rec));
+				term_->show_success("Mnemonic phrase record added successfully.");
+				return;
+			}
 			else if (key == 'n') {
 				auto rec = prompt_note_record();
 				db_->add_note_record(std::move(rec));
 				term_->show_success("Note record added successfully.");
 				return;
 			}
-			else if (key == 'b') {
-				auto rec = prompt_bankcard_record();
-				db_->add_bankcard_record(std::move(rec));
-				term_->show_success("Bank card record added successfully.");
-				return;
-			}
-			else if (key == 'd') {
-				auto rec = prompt_discountcard_record();
-				db_->add_discountcard_record(std::move(rec));
-				term_->show_success("Discount card record added successfully.");
-				return;
-			}
-			else if (key == 't') {
-				auto rec = prompt_transportcard_record();
-				db_->add_transportcard_record(std::move(rec));
-				term_->show_success("Transport card record added successfully.");
-				return;
+			else if (key == 'c') {
+				while (true) {
+					term_->show_message("\nSelect card type:");
+					term_->show_message("  [B]ank Card");
+					term_->show_message("  [D]iscount Card");
+					term_->show_message("  [T]ransport Card");
+					term_->show_message("  [Q]uit to previous menu\n");
+					auto card_choice = term_->prompt_input("  Your choice: ");
+					if (card_choice.empty()) continue;
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
+					if (card_key == 'b') {
+						auto rec = prompt_bankcard_record();
+						db_->add_bankcard_record(std::move(rec));
+						term_->show_success("Bank card record added successfully.");
+						return;
+					}
+					else if (card_key == 'd') {
+						auto rec = prompt_discountcard_record();
+						db_->add_discountcard_record(std::move(rec));
+						term_->show_success("Discount card record added successfully.");
+						return;
+					}
+					else if (card_key == 't') {
+						auto rec = prompt_transportcard_record();
+						db_->add_transportcard_record(std::move(rec));
+						term_->show_success("Transport card record added successfully.");
+						return;
+					}
+					else if (card_key == 'q') {
+						break;
+					}
+					else {
+						term_->show_error("Invalid option. Please press B, D, T or Q.");
+					}
+				}
 			}
 			else if (key == 'q') {
 				term_->show_message("Operation cancelled.");
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, B, N, D, T, or Q.");
+				term_->show_error("Invalid option. Please press P, C, M, N or Q.");
 			}
 		}
 	}

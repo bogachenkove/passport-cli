@@ -274,4 +274,77 @@ namespace ui {
 		}
 		term->show_message("\n  Total transport card records: " + std::to_string(records.size()));
 	}
+	void display_mnemonicphrase_records(
+		const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+		const auto& records = db.mnemonicphrase_records();
+		if (records.empty()) {
+			term->show_message("\n  No mnemonic phrase records to display.");
+			return;
+		}
+		constexpr std::size_t kDateColWidth = 16;
+		std::size_t w_value = 5;
+		std::size_t w_mnemonic = 30;
+		std::size_t w_passphrase = 10;
+		std::size_t w_lang = 10;
+		std::size_t w_iter = 8;
+		std::size_t w_note = 5;
+		for (const auto& r : records) {
+			std::string val_str = std::to_string(r.value);
+			if (val_str.size() > w_value) w_value = val_str.size();
+			std::string mnemonic_str;
+			for (const auto& word : r.mnemonic) {
+				if (!mnemonic_str.empty()) mnemonic_str += " ";
+				mnemonic_str += word;
+			}
+			if (mnemonic_str.size() > w_mnemonic) w_mnemonic = mnemonic_str.size();
+			std::string pass = format_field(r.passphrase);
+			if (pass.size() > w_passphrase) w_passphrase = pass.size();
+			std::string lang = format_field(r.language);
+			if (lang.size() > w_lang) w_lang = lang.size();
+			std::string iter = std::to_string(r.iteration);
+			if (iter.size() > w_iter) w_iter = iter.size();
+			std::string note = format_field(r.note);
+			if (note.size() > w_note) w_note = note.size();
+		}
+		std::ostringstream header;
+		header << "\n  --- Mnemonic Phrase Records (* = required) ---\n\n";
+		header << "  "
+			<< std::left
+			<< std::setw(5) << "#"
+			<< std::setw(kDateColWidth + 3) << "Date"
+			<< std::setw(w_value + 3) << "Words*"
+			<< std::setw(w_mnemonic + 3) << "Mnemonic*"
+			<< std::setw(w_passphrase + 3) << "Passphrase"
+			<< std::setw(w_lang + 3) << "Language*"
+			<< std::setw(w_iter + 3) << "Iteration"
+			<< std::setw(w_note + 3) << "Note"
+			<< '\n';
+		std::size_t total_w = 5 + (kDateColWidth + 3) + (w_value + 3) + (w_mnemonic + 3) +
+			(w_passphrase + 3) + (w_lang + 3) + (w_iter + 3) + (w_note + 3);
+		header << "  " << std::string(total_w, '-');
+		term->show_message(header.str());
+		for (std::size_t i = 0;
+			i < records.size();
+			++i) {
+			const auto& r = records[i];
+			std::ostringstream row;
+			std::string mnemonic_str;
+			for (const auto& word : r.mnemonic) {
+				if (!mnemonic_str.empty()) mnemonic_str += " ";
+				mnemonic_str += word;
+			}
+			row << "  "
+				<< std::left
+				<< std::setw(5) << (i + 1)
+				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
+				<< std::setw(w_value + 3) << r.value
+				<< std::setw(w_mnemonic + 3) << mnemonic_str
+				<< std::setw(w_passphrase + 3) << format_field(r.passphrase)
+				<< std::setw(w_lang + 3) << format_field(r.language)
+				<< std::setw(w_iter + 3) << r.iteration
+				<< std::setw(w_note + 3) << format_field(r.note);
+			term->show_message(row.str());
+		}
+		term->show_message("\n  Total mnemonic phrase records: " + std::to_string(records.size()));
+	}
 }

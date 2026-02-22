@@ -17,6 +17,7 @@ namespace security::crypto {
 		[[nodiscard]] domain::models::RecordType bankcard_type() const;
 		[[nodiscard]] domain::models::RecordType discountcard_type() const;
 		[[nodiscard]] domain::models::RecordType transportcard_type() const;
+		[[nodiscard]] domain::models::RecordType mnemonicphrase_type() const;
 		[[nodiscard]] const std::vector<std::uint8_t>& master_seed() const noexcept;
 		[[nodiscard]] const std::vector<std::uint8_t>& context_salt() const noexcept;
 		[[nodiscard]] bool is_initialised() const noexcept;

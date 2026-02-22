@@ -6,6 +6,7 @@
 #include "../../models/bank_card_record.hpp"
 #include "../../models/discount_card_record.hpp"
 #include "../../models/transport_card_record.hpp"
+#include "../../models/mnemonic_phrase_record.hpp"
 #include <memory>
 
 namespace app::commands {
@@ -23,5 +24,6 @@ namespace app::commands {
 		domain::models::BankCardRecord prompt_bankcard_record();
 		domain::models::DiscountCardRecord prompt_discountcard_record();
 		domain::models::TransportCardRecord prompt_transportcard_record();
+		domain::models::MnemonicPhraseRecord prompt_mnemonicphrase_record();
 	};
 }

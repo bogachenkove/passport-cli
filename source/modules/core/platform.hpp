@@ -16,6 +16,13 @@
 
 namespace fs = std::filesystem;
 namespace core::platform {
+	inline void init_console_utf8() {
+#ifdef _WIN32
+		SetConsoleOutputCP(CP_UTF8);
+		SetConsoleCP(CP_UTF8);
+#endif
+		std::setlocale(LC_ALL, "C.UTF-8");
+	}
 	inline void clear_screen() {
 #ifdef _WIN32
 		std::system("cls");

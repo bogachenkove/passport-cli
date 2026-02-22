@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string> // may have to be removed
+#include <array>
 #include <sodium.h>
 
 namespace core::constants {
@@ -60,6 +61,13 @@ namespace core::constants {
 	inline constexpr std::size_t kHolderMaxLength_TransportCard = 30;
 	inline constexpr std::size_t kNoteMinLength_TransportCard = 5;
 	inline constexpr std::size_t kNoteMaxLength_TransportCard = 30;
+	inline constexpr std::array<std::size_t, 5> kValidMnemonicWordCounts = { 12, 15, 18, 21, 24 };
+	inline constexpr std::size_t kPassphraseMinLength_MnemonicPhrase = 1;
+	inline constexpr std::size_t kPassphraseMaxLength_MnemonicPhrase = 100;
+	inline constexpr std::size_t kNoteMinLength_MnemonicPhrase = 5;
+	inline constexpr std::size_t kNoteMaxLength_MnemonicPhrase = 30;
+	inline constexpr std::uint32_t kIterationMin_MnemonicPhrase = 2048;
+	inline constexpr std::uint32_t kIterationMax_MnemonicPhrase = 1000000;
 	inline constexpr const char* kLowercaseChars = "abcdefghijklmnopqrstuvwxyz";
 	inline constexpr const char* kUppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	inline constexpr const char* kDigitChars = "0123456789";

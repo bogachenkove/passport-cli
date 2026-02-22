@@ -146,7 +146,6 @@ namespace app::commands {
 		auto input = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
 		auto indices = app::utils::parse_record_numbers(input, db_->transportcard_record_count());
-
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
@@ -169,6 +168,37 @@ namespace app::commands {
 			term_->show_error("No records were removed.");
 		}
 	}
+	void RemoveRecordCommand::remove_mnemonicphrase_records() {
+		if (db_->mnemonicphrase_record_count() == 0) {
+			term_->show_message("No mnemonic phrase records to remove.");
+			return;
+		}
+		ui::display_mnemonicphrase_records(*db_, term_);
+		auto input = term_->prompt_input(
+			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		auto indices = app::utils::parse_record_numbers(input, db_->mnemonicphrase_record_count());
+		if (indices.empty()) {
+			if (input.find('0') != std::string::npos)
+				term_->show_message("Removal cancelled.");
+			else
+				term_->show_error("No valid records to remove.");
+			return;
+		}
+		int removed = 0;
+		for (std::size_t idx : indices) {
+			if (db_->remove_mnemonicphrase_record(idx))
+				++removed;
+		}
+		if (removed > 0) {
+			if (removed == 1)
+				term_->show_success("1 mnemonic phrase record removed.");
+			else
+				term_->show_success(std::to_string(removed) + " mnemonic phrase records removed.");
+		}
+		else {
+			term_->show_error("No records were removed.");
+		}
+	}
 	void RemoveRecordCommand::execute() {
 		if (db_->record_count() == 0) {
 			term_->show_message("The database is empty. Nothing to remove.");
@@ -176,10 +206,9 @@ namespace app::commands {
 		}
 		term_->show_message("\nWhich type of record would you like to remove?");
 		term_->show_message("  [P]assword");
-		term_->show_message("  [B]ank Card");
+		term_->show_message("  [C]ards");
+		term_->show_message("  [M]nemonic phrase");
 		term_->show_message("  [N]ote");
-		term_->show_message("  [D]iscount Card");
-		term_->show_message("  [T]ransport Card");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -189,28 +218,50 @@ namespace app::commands {
 				remove_password_records();
 				return;
 			}
-			else if (key == 'b') {
-				remove_bankcard_records();
+			else if (key == 'm') {
+				remove_mnemonicphrase_records();
 				return;
 			}
 			else if (key == 'n') {
 				remove_note_records();
 				return;
 			}
-			else if (key == 'd') {
-				remove_discountcard_records();
-				return;
-			}
-			else if (key == 't') {
-				remove_transportcard_records();
-				return;
+			else if (key == 'c') {
+				while (true) {
+					term_->show_message("\nSelect card type to remove:");
+					term_->show_message("  [B]ank Card");
+					term_->show_message("  [D]iscount Card");
+					term_->show_message("  [T]ransport Card");
+					term_->show_message("  [Q]uit to previous menu\n");
+					auto card_choice = term_->prompt_input("  Your choice: ");
+					if (card_choice.empty()) continue;
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
+					if (card_key == 'b') {
+						remove_bankcard_records();
+						return;
+					}
+					else if (card_key == 'd') {
+						remove_discountcard_records();
+						return;
+					}
+					else if (card_key == 't') {
+						remove_transportcard_records();
+						return;
+					}
+					else if (card_key == 'q') {
+						break;
+					}
+					else {
+						term_->show_error("Invalid option. Please press B, D, T or Q.");
+					}
+				}
 			}
 			else if (key == 'q') {
 				term_->show_message("Operation cancelled.");
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, B, N, D, T, or Q.");
+				term_->show_error("Invalid option. Please press P, C, M, N or Q.");
 			}
 		}
 	}

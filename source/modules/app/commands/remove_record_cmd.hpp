@@ -18,5 +18,6 @@ namespace app::commands {
 		void remove_bankcard_records();
 		void remove_discountcard_records();
 		void remove_transportcard_records();
+		void remove_mnemonicphrase_records();
 	};
 }

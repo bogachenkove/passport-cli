@@ -17,10 +17,9 @@ namespace app::commands {
 		}
 		term_->show_message("\nWhich records would you like to view?");
 		term_->show_message("  [P]asswords");
-		term_->show_message("  [B]ank Cards");
+		term_->show_message("  [C]ards");
+		term_->show_message("  [M]nemonic phrase");
 		term_->show_message("  [N]otes");
-		term_->show_message("  [D]iscount Cards");
-		term_->show_message("  [T]ransport Cards");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -30,28 +29,50 @@ namespace app::commands {
 				ui::display_password_records(*db_, term_);
 				return;
 			}
-			else if (key == 'b') {
-				ui::display_bankcard_records(*db_, term_);
+			else if (key == 'm') {
+				ui::display_mnemonicphrase_records(*db_, term_);
 				return;
 			}
 			else if (key == 'n') {
 				ui::display_note_records(*db_, term_);
 				return;
 			}
-			else if (key == 'd') {
-				ui::display_discountcard_records(*db_, term_);
-				return;
-			}
-			else if (key == 't') {
-				ui::display_transportcard_records(*db_, term_);
-				return;
+			else if (key == 'c') {
+				while (true) {
+					term_->show_message("\nSelect card type to display:");
+					term_->show_message("  [B]ank Cards");
+					term_->show_message("  [D]iscount Cards");
+					term_->show_message("  [T]ransport Cards");
+					term_->show_message("  [Q]uit to previous menu\n");
+					auto card_choice = term_->prompt_input("  Your choice: ");
+					if (card_choice.empty()) continue;
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
+					if (card_key == 'b') {
+						ui::display_bankcard_records(*db_, term_);
+						return;
+					}
+					else if (card_key == 'd') {
+						ui::display_discountcard_records(*db_, term_);
+						return;
+					}
+					else if (card_key == 't') {
+						ui::display_transportcard_records(*db_, term_);
+						return;
+					}
+					else if (card_key == 'q') {
+						break;
+					}
+					else {
+						term_->show_error("Invalid option. Please press B, D, T or Q.");
+					}
+				}
 			}
 			else if (key == 'q') {
 				term_->show_message("Operation cancelled.");
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, B, N, D, T, or Q.");
+				term_->show_error("Invalid option. Please press P, C, M, N or Q.");
 			}
 		}
 	}

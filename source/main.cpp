@@ -3,12 +3,14 @@
 #include "modules/crypto/crypto_service.hpp"
 #include "modules/storage/file_database.hpp"
 #include "modules/core/metadata.hpp"
+#include "modules/core/platform.hpp"
 #include <memory>
 
 int main(int argc, char* argv[]) {
 	if (handle_metadata_flags(argc, argv)) {
 		return 0;
 	}
+	core::platform::init_console_utf8();
 	auto terminal = std::make_shared<ui::ConsoleTerminal>();
 	auto crypto = std::make_shared<security::crypto::SodiumCryptoService>();
 	auto database = std::make_shared<security::storage::FileDatabase>(crypto);

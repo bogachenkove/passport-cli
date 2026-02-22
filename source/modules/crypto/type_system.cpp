@@ -57,6 +57,9 @@ namespace security::crypto {
 	domain::models::RecordType TypeSystem::transportcard_type() const {
 		return derive_type(domain::models::kContextTransportCard);
 	}
+	domain::models::RecordType TypeSystem::mnemonicphrase_type() const {
+		return derive_type(domain::models::kContextMnemonicPhrase);
+	}
 	const std::vector<std::uint8_t>& TypeSystem::master_seed() const noexcept {
 		return master_seed_;
 	}

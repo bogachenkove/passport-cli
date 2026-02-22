@@ -30,6 +30,7 @@ namespace security::storage {
 		const auto bank_type = type_system_.bankcard_type();
 		const auto disc_type = type_system_.discountcard_type();
 		const auto trans_type = type_system_.transportcard_type();
+		const auto mnem_type = type_system_.mnemonicphrase_type();
 		for (const auto& r : password_records_) {
 			buf.insert(buf.end(), pw_type.begin(), pw_type.end());
 			core::endian::append_u64_be(buf, r.date);
@@ -72,6 +73,18 @@ namespace security::storage {
 			filesystem::storage::binary_serializer::write_field(buf, r.cvv);
 			filesystem::storage::binary_serializer::write_field(buf, r.note);
 		}
+		for (const auto& r : mnemonicphrase_records_) {
+			buf.insert(buf.end(), mnem_type.begin(), mnem_type.end());
+			core::endian::append_u64_be(buf, r.date);
+			core::endian::append_u64_be(buf, r.mnemonic.size());
+			for (const auto& word : r.mnemonic) {
+				filesystem::storage::binary_serializer::write_field(buf, word);
+			}
+			filesystem::storage::binary_serializer::write_field(buf, r.passphrase);
+			filesystem::storage::binary_serializer::write_field(buf, r.language);
+			core::endian::append_u32_be(buf, r.iteration);
+			filesystem::storage::binary_serializer::write_field(buf, r.note);
+		}
 		return buf;
 	}
 	void FileDatabase::deserialize_records(const std::vector<std::uint8_t>& plaintext) {
@@ -80,6 +93,7 @@ namespace security::storage {
 		bankcard_records_.clear();
 		discount_records_.clear();
 		transport_records_.clear();
+		mnemonicphrase_records_.clear();
 		if (plaintext.empty()) {
 			type_system_.generate_seeds(*crypto_);
 			return;
@@ -106,6 +120,7 @@ namespace security::storage {
 		const auto bank_type = type_system_.bankcard_type();
 		const auto disc_type = type_system_.discountcard_type();
 		const auto trans_type = type_system_.transportcard_type();
+		const auto mnem_type = type_system_.mnemonicphrase_type();
 		while (offset < plaintext.size()) {
 			if (offset + 32 > plaintext.size()) {
 				throw core::errors::DeserialisationError{
@@ -191,6 +206,40 @@ namespace security::storage {
 				rec.cvv = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
 				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
 				transport_records_.push_back(std::move(rec));
+			}
+			else if (sodium_memcmp(tag.data(), mnem_type.data(), tag.size()) == 0) {
+				if (offset + 16 > plaintext.size()) {
+					throw core::errors::DeserialisationError{
+					  "Truncated MnemonicPhraseRecord: not enough bytes for fixed fields."
+					};
+				}
+				domain::models::MnemonicPhraseRecord rec;
+				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
+				offset += 8;
+				std::uint64_t word_count = core::endian::read_u64_be(plaintext.data() + offset);
+				offset += 8;
+				rec.value = word_count;
+				if (word_count > 24) {
+					throw core::errors::DeserialisationError{
+					  "Invalid word count in MnemonicPhraseRecord."
+					};
+				}
+				for (std::uint64_t i = 0;
+					i < word_count;
+					++i) {
+					rec.mnemonic.push_back(filesystem::storage::binary_serializer::read_string_field(plaintext, offset));
+				}
+				rec.passphrase = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.language = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				if (offset + 4 > plaintext.size()) {
+					throw core::errors::DeserialisationError{
+					  "Truncated MnemonicPhraseRecord: missing iteration."
+					};
+				}
+				rec.iteration = core::endian::read_u32_be(plaintext.data() + offset);
+				offset += 4;
+				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				mnemonicphrase_records_.push_back(std::move(rec));
 			}
 			else {
 				throw core::errors::DeserialisationError{
@@ -386,8 +435,24 @@ namespace security::storage {
 	std::size_t FileDatabase::transportcard_record_count() const noexcept {
 		return transport_records_.size();
 	}
+	void FileDatabase::add_mnemonicphrase_record(domain::models::MnemonicPhraseRecord record) {
+		if (record.date == 0) record.date = unix_timestamp_now();
+		mnemonicphrase_records_.push_back(std::move(record));
+	}
+	bool FileDatabase::remove_mnemonicphrase_record(std::size_t index) {
+		if (index >= mnemonicphrase_records_.size()) return false;
+		mnemonicphrase_records_.erase(mnemonicphrase_records_.begin() + static_cast<std::ptrdiff_t>(index));
+		return true;
+	}
+	const std::vector<domain::models::MnemonicPhraseRecord>&
+		FileDatabase::mnemonicphrase_records() const noexcept {
+		return mnemonicphrase_records_;
+	}
+	std::size_t FileDatabase::mnemonicphrase_record_count() const noexcept {
+		return mnemonicphrase_records_.size();
+	}
 	std::size_t FileDatabase::record_count() const noexcept {
-		return password_records_.size() + note_records_.size() + bankcard_records_.size() + discount_records_.size() + transport_records_.size();
+		return password_records_.size() + note_records_.size() + bankcard_records_.size() + discount_records_.size() + transport_records_.size() + mnemonicphrase_records_.size();
 	}
 	std::uint64_t FileDatabase::timestamp_created() const noexcept {
 		return ts_created_;
