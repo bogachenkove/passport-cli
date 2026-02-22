@@ -122,8 +122,15 @@ endif()
 # ---- Compiler warnings (optional but recommended) ----
 if(MSVC)
     # On MSVC, enable level 4 warnings.
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-else()
-    # On GCC/Clang, enable a set of common warning flags.
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /utf-8)
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+    # For GCC, set UTF-8 execution charset
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8 -fwide-exec-charset=UTF-8)
+elseif(CLANG)
+    if(MSVC_TOOLCHAIN)
+        target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+    else()
+        # For Clang, set a similar set of flags
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8)
+    endif()
 endif()

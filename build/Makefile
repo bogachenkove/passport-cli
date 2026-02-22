@@ -55,6 +55,23 @@ else
     endif
 endif
 
+# ---- Force UTF-8 encoding (for GCC/Clang, including MinGW on Windows) ----
+# These flags ensure that the compiler interprets source files as UTF-8 and
+# that the generated executable uses UTF-8 for string literals.
+COMPILER := $(notdir $(CXX))
+ifeq ($(COMPILER),cl)
+    CXXFLAGS += /utf-8
+else ifneq (,$(findstring clang-cl,$(COMPILER)))
+    CXXFLAGS += /utf-8
+else ifneq (,$(findstring g++,$(COMPILER)))
+    CXXFLAGS += -finput-charset=UTF-8
+    CXXFLAGS += -fexec-charset=UTF-8
+    CXXFLAGS += -fwide-exec-charset=UTF-8
+else ifneq (,$(findstring clang,$(COMPILER)))
+    CXXFLAGS += -finput-charset=UTF-8
+    CXXFLAGS += -fexec-charset=UTF-8
+endif
+
 # ---- Extract metadata from metadata.hpp ----
 # The version header contains product information in #define macros.
 VERSION_H = $(SRC_DIR)/core/metadata.hpp
@@ -82,7 +99,7 @@ CXXFLAGS += \
     -DPRODUCT_VERSION=\"$(PRODUCT_VERSION)\" \
     -DLICENSE=\"$(LICENSE)\" \
     -DCOPYRIGHT=\"$(COPYRIGHT)\" \
-    -DLEGAL_COPYRIGHT=\"$(LEGAL_COPYRIGHT)\" \
+    -DAUTHOR=\"$(AUTHOR)\" \
     -DCONTACT=\"$(CONTACT)\" \
     -DHOMEPAGE=\"$(HOMEPAGE)\"
 
