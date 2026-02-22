@@ -3,7 +3,7 @@
 #include <cstring>
 #define ProductName "Passport CLI"
 #define FileDescription "Secure Password Manager"
-#define ProductVersion "0.0.0.7"
+#define ProductVersion "0.0.0.10"
 #define License "MIT License"
 #define Copyright "Copyright © 2026 Bogachenko Vyacheslav. All rights reserved."
 #define Author "Bogachenko Vyacheslav"
