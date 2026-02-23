@@ -2,14 +2,14 @@
 # Production Makefile for passport-cli. Supports Linux, macOS, and Windows (MinGW/MSYS).
 
 # ==== Build type selection ====
-# User can set BUILD=debug or BUILD=release. Default is debug.
-BUILD ?= debug
+# User can set BUILD=debug or BUILD=release. Default is release.
+BUILD ?= release
 ifeq ($(BUILD),debug)
     BUILD_MODE := Debug
 else ifeq ($(BUILD),release)
     BUILD_MODE := Release
 else
-    $(error BUILD must be either 'debug' or 'release' (default: debug))
+    $(error BUILD must be either 'debug' or 'release' (default: release))
 endif
 
 # Name of the final executable.
