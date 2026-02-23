@@ -1,5 +1,5 @@
 # Makefile
-# Production Makefile for passport-cli. Supports Linux, macOS, and Windows (MinGW/MSYS).
+# Main build configuration for the passport-cli executable
 
 # ==== Build type selection ====
 # User can set BUILD=debug or BUILD=release. Default is release.
@@ -135,54 +135,24 @@ ifeq ($(ICU_FOUND),0)
 endif
 
 # ==== Compiler detection and base flags ====
-# Determine which compiler is being used to apply appropriate flags.
-COMPILER := $(notdir $(CXX))
-
-ifeq ($(COMPILER),cl)
-    # Microsoft Visual C++
-    CXXFLAGS += /std:c++20 /W4 /utf-8
-else ifneq (,$(findstring clang-cl,$(COMPILER)))
-    # clang-cl (MSVC‑compatible frontend)
-    CXXFLAGS += /std:c++20 /utf-8
-else ifneq (,$(findstring g++,$(COMPILER)))
-    # GCC (including MinGW)
-    CXXFLAGS += -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8
-else ifneq (,$(findstring clang,$(COMPILER)))
-    # Native Clang
-    CXXFLAGS += -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8
-endif
+# Add warning and encoding flags (these are safe for GCC and Clang).
+CXXFLAGS += -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8
 
 # ==== Build‑type specific flags ====
 # Add optimisation, debug symbols, and other flags based on BUILD.
 ifeq ($(BUILD),debug)
-    ifeq ($(COMPILER),cl)
-        CXXFLAGS += /Od /Zi /MDd
-        LDFLAGS  += /DEBUG
-    else ifneq (,$(findstring clang-cl,$(COMPILER)))
-        CXXFLAGS += /Od /Zi /MDd
-        LDFLAGS  += /DEBUG
-    else
-        # Normalize source and build paths in debug info for reproducibility.
-        SRC_ABS := $(abspath $(SRC_DIR))
-        CUR_ABS := $(CURDIR)
-        CXXFLAGS += -O0 -g \
-            -fdebug-prefix-map=$(SRC_ABS)=. \
-            -fdebug-prefix-map=$(SRC_DIR)=. \
-            -fdebug-prefix-map=$(CUR_ABS)=. \
-            -fno-ident \
-            -gno-record-gcc-switches
-    endif
+    # Normalize source and build paths in debug info for reproducibility.
+    SRC_ABS := $(abspath $(SRC_DIR))
+    CUR_ABS := $(CURDIR)
+    CXXFLAGS += -O0 -g \
+        -fdebug-prefix-map=$(SRC_ABS)=. \
+        -fdebug-prefix-map=$(SRC_DIR)=. \
+        -fdebug-prefix-map=$(CUR_ABS)=. \
+        -fno-ident \
+        -gno-record-gcc-switches
 else ifeq ($(BUILD),release)
-    ifeq ($(COMPILER),cl)
-        CXXFLAGS += /O2 /DNDEBUG /MD
-        LDFLAGS  += /DEBUG:NONE
-    else ifneq (,$(findstring clang-cl,$(COMPILER)))
-        CXXFLAGS += /O2 /DNDEBUG /MD
-        LDFLAGS  += /DEBUG:NONE
-    else
-        CXXFLAGS += -O2 -DNDEBUG -g0
-        LDFLAGS  += -s
-    endif
+    CXXFLAGS += -O2 -DNDEBUG -g0
+    LDFLAGS  += -s
 endif
 
 # Add source and module directories to the include path.

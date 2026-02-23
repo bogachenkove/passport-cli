@@ -161,52 +161,27 @@ endif()
 
 # ==== Compiler and linker flags ====
 # Set warnings, UTF-8 handling, and flags specific to the build type.
-
-# Base warning and encoding flags depend on the compiler.
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /utf-8)
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    if(MSVC_TOOLCHAIN)
-        target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
-    else()
-        target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8)
-    endif()
-endif()
+target_compile_options(${PROJECT_NAME} PRIVATE
+    -Wall -Wextra -pedantic
+    -finput-charset=UTF-8 -fexec-charset=UTF-8
+)
 
 # Build‑type specific flags: Debug vs Release.
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PRIVATE /Od /Zi)
-        target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
-    else()
-        # Normalize source and binary paths in debug info for reproducible builds.
-        get_filename_component(SOURCE_ABS "${SOURCE_DIR}" ABSOLUTE)
-        get_filename_component(BINARY_ABS "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            -O0 -g
-            -fdebug-prefix-map=${SOURCE_ABS}=.
-            -fdebug-prefix-map=${BINARY_ABS}=.
-            -fno-ident
-            -gno-record-gcc-switches
-        )
-    endif()
+    # Normalize source and binary paths in debug info for reproducible builds.
+    get_filename_component(SOURCE_ABS "${SOURCE_DIR}" ABSOLUTE)
+    get_filename_component(BINARY_ABS "${CMAKE_CURRENT_BINARY_DIR}" ABSOLUTE)
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -O0 -g
+        -fdebug-prefix-map=${SOURCE_ABS}=.
+        -fdebug-prefix-map=${BINARY_ABS}=.
+        -fno-ident
+        -gno-record-gcc-switches
+    )
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PRIVATE /O2 /DNDEBUG)
-        target_link_options(${PROJECT_NAME} PRIVATE /DEBUG:NONE)
-    else()
-        target_compile_options(${PROJECT_NAME} PRIVATE -O2 -DNDEBUG -g0)
-        target_link_options(${PROJECT_NAME} PRIVATE -s)
-    endif()
+    target_compile_options(${PROJECT_NAME} PRIVATE -O2 -DNDEBUG -g0)
+    target_link_options(${PROJECT_NAME} PRIVATE -s)
 else()
-    # If an unknown build type is given, fall back to Debug settings.
     message(WARNING "Unknown build type '${CMAKE_BUILD_TYPE}'. Defaulting to Debug flags.")
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PRIVATE /Od /Zi)
-        target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
-    else()
-        target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
-    endif()
+    target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
 endif()
