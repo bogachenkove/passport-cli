@@ -33,9 +33,6 @@ CXXFLAGS = -std=c++20
 LDFLAGS =
 LIBS =
 
-# Detect the operating system for platform-specific adjustments.
-UNAME_S := $(shell uname -s 2>/dev/null || echo Windows)
-
 # ==== Dependency: libsodium ====
 # libsodium provides cryptographic functions. It is mandatory.
 
@@ -65,19 +62,17 @@ else
     endif
 endif
 
-# If still not found, search in standard system paths (Unix only).
+# If still not found, search in standard system paths.
 ifeq ($(LIBSODIUM_FOUND),0)
-    ifneq ($(UNAME_S), Windows)
-        ifneq (,$(wildcard /usr/include/sodium.h))
-            CXXFLAGS += -I/usr/include
-            LIBSODIUM_FOUND := 1
-        else ifneq (,$(wildcard /usr/local/include/sodium.h))
-            CXXFLAGS += -I/usr/local/include
-            LIBSODIUM_FOUND := 1
-        endif
-        ifeq ($(LIBSODIUM_FOUND),1)
-            LIBS += -lsodium
-        endif
+    ifneq (,$(wildcard /usr/include/sodium.h))
+        CXXFLAGS += -I/usr/include
+        LIBSODIUM_FOUND := 1
+    else ifneq (,$(wildcard /usr/local/include/sodium.h))
+        CXXFLAGS += -I/usr/local/include
+        LIBSODIUM_FOUND := 1
+    endif
+    ifeq ($(LIBSODIUM_FOUND),1)
+        LIBS += -lsodium
     endif
 endif
 
@@ -113,19 +108,17 @@ else
     endif
 endif
 
-# Manual system path search (Unix only).
+# Manual system path search.
 ifeq ($(ICU_FOUND),0)
-    ifneq ($(UNAME_S), Windows)
-        ifneq (,$(wildcard /usr/include/unicode/unistr.h))
-            CXXFLAGS += -I/usr/include
-            ICU_FOUND := 1
-        else ifneq (,$(wildcard /usr/local/include/unicode/unistr.h))
-            CXXFLAGS += -I/usr/local/include
-            ICU_FOUND := 1
-        endif
-        ifeq ($(ICU_FOUND),1)
-            LIBS += -licuuc -licui18n -licudata
-        endif
+    ifneq (,$(wildcard /usr/include/unicode/unistr.h))
+        CXXFLAGS += -I/usr/include
+        ICU_FOUND := 1
+    else ifneq (,$(wildcard /usr/local/include/unicode/unistr.h))
+        CXXFLAGS += -I/usr/local/include
+        ICU_FOUND := 1
+    endif
+    ifeq ($(ICU_FOUND),1)
+        LIBS += -licuuc -licui18n -licudata
     endif
 endif
 
@@ -226,18 +219,6 @@ rebuild: clean all
 # Build and then run the executable.
 run: all
 	./$(TARGET)
-
-# Installation prefix for Unix-like systems.
-PREFIX = /usr/local
-
-# Install the executable (Unix only; Windows users copy manually).
-install: $(TARGET)
-ifeq ($(UNAME_S), Windows)
-	@echo "Install not supported on Windows. Please copy the executable manually."
-else
-	install -m 755 $(TARGET) $(PREFIX)/bin/$(TARGET)
-	@echo "Installed to $(PREFIX)/bin/$(TARGET)"
-endif
 
 # Declare phony targets (not real files).
 .PHONY: all clean rebuild run install
