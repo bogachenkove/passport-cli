@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Build script for passport-cli project.
+Build script for Passport-CLI project.
 Allows selection of build type, compiler, and build system.
+Builds directly in the directory containing the build files.
 """
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -39,13 +41,12 @@ def check_dependencies():
     missing = [cmd for cmd in required if shutil.which(cmd) is None]
     if missing:
         error_exit(f"Missing required packages: {', '.join(missing)}. Install them and retry.")
-    print_color("All dependencies found.", Fore.GREEN)
 
 def get_choice(prompt, options, default=None):
     """
     Universal choice selector.
-    prompt: text prompt
-    options: string of allowed characters (e.g., "YN", "DR", "GC", "CM")
+    prompt: text prompt (e.g., "Build type (Debug/Release)")
+    options: string of allowed characters (e.g., "DR")
     default: default value if user presses Enter
     Returns selected character in uppercase.
     """
@@ -70,9 +71,9 @@ def get_build_config():
     """Loop to select build configuration with confirmation."""
     while True:
         print_color("\n--- Build Configuration ---", Fore.CYAN, Style.BRIGHT)
-        build_type = get_choice("Build type", "DR", default="R")
-        compiler = get_choice("Compiler", "GC", default="G")
-        builder = get_choice("Build system", "CM", default="C")
+        build_type = get_choice("Build type (Debug/Release)", "DR", default="R")
+        compiler = get_choice("Compiler (G++/Clang++)", "GC", default="G")
+        builder = get_choice("Build system (CMake/Make)", "CM", default="C")
 
         type_map = {'D': 'Debug', 'R': 'Release'}
         compiler_map = {'G': 'G++', 'C': 'Clang++'}
@@ -129,36 +130,23 @@ def locate_build_file(builder):
         print_color(f"Removing existing {leftover_dir} from source directory.", Fore.YELLOW)
         shutil.rmtree(leftover_path)
 
+    # Also remove CMake cache and other artifacts for a clean build
+    if builder == 'C':
+        cache = src_dir / "CMakeCache.txt"
+        if cache.exists():
+            cache.unlink()
+        cmake_install = src_dir / "cmake_install.cmake"
+        if cmake_install.exists():
+            cmake_install.unlink()
+
     return src_dir
-
-def prepare_build_dir():
-    """Create and clean build-dev directory."""
-    build_dir = Path.cwd() / "build-dev"
-    if build_dir.exists():
-        # Clean existing directory
-        for item in build_dir.iterdir():
-            if item.is_dir():
-                shutil.rmtree(item)
-            else:
-                item.unlink()
-    else:
-        build_dir.mkdir()
-    return build_dir
-
-def copy_build_file(src_dir, builder, dst_dir):
-    """Copy build file from src_dir to build-dev directory."""
-    filename = "CMakeLists.txt" if builder == 'C' else "Makefile"
-    src = src_dir / filename
-    dst = dst_dir / filename
-    shutil.copy(src, dst)
-    return dst
 
 def build_with_cmake(build_dir, build_type, compiler):
     """Build using CMake."""
     print_color("\n--- Running CMake ---", Fore.CYAN, Style.BRIGHT)
     os.chdir(build_dir)
 
-    cmake_cmd = ['cmake', '..']
+    cmake_cmd = ['cmake', '.']
     cmake_cmd.append(f'-DCMAKE_BUILD_TYPE={"Debug" if build_type=="D" else "Release"}')
     if compiler == 'G':
         cmake_cmd.append('-DCMAKE_CXX_COMPILER=g++')
@@ -210,23 +198,21 @@ def compute_hashes(file_path):
     return blake2, sha256
 
 def main():
-    if not COLORAMA_AVAILABLE:
-        print("Warning: Colorama not installed, output will be monochrome.")
-    print_color("passport-cli build script", Fore.GREEN, Style.BRIGHT)
+    # System information
+    system = platform.system()
+    release = platform.release()
+    print_color(f"System: {system} {release}", Fore.CYAN)
+
+    print_color("Passport-CLI build script", Fore.GREEN, Style.BRIGHT)
 
     check_dependencies()
 
     build_type, compiler, builder = get_build_config()
 
     # Locate the build system file and clean leftovers
-    src_dir = locate_build_file(builder)
+    build_dir = locate_build_file(builder)
 
-    # Prepare build directory
-    build_dir = prepare_build_dir()
-    print_color(f"Working directory: {build_dir}", Fore.CYAN)
-
-    # Copy the appropriate build file
-    copy_build_file(src_dir, builder, build_dir)
+    print_color(f"Build directory: {build_dir}", Fore.CYAN)
 
     # Run the build
     if builder == 'C':  # CMake
