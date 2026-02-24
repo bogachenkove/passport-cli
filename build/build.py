@@ -35,161 +35,36 @@ def error_exit(message):
     print_color(f"Error: {message}", Fore.RED, Style.BRIGHT)
     sys.exit(1)
 
-def check_root():
-    """Ensure script is not run as root."""
-    if os.geteuid() == 0:
-        error_exit("This script should not be run as root. Please run as a normal user.")
+def require_command(cmd_name):
+    """
+    Check if a command is available. If not, offer to update package lists and
+    prompt user to enter an installation command, execute it, and re-check.
+    Loop until command is found or user aborts with Q.
+    """
+    while True:
+        if shutil.which(cmd_name) is not None:
+            return True
+        print_color(f"Required command '{cmd_name}' not found in PATH.", Fore.YELLOW)
 
-def check_network():
-    """Check internet connectivity by pinging a reliable host."""
-    try:
-        subprocess.run(['ping', '-c', '1', '8.8.8.8'],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL,
-                       check=True)
-        return True
-    except subprocess.CalledProcessError:
-        return False
+        # Ask to update package lists
+        update_choice = get_choice("Update package lists before installing?", "YN", default="N")
+        if update_choice == 'Y':
+            print_color("Enter update command (e.g., 'sudo apt update'):", Fore.CYAN)
+            update_cmd = input("> ").strip()
+            if update_cmd:
+                result = subprocess.run(update_cmd, shell=True)
+                if result.returncode != 0:
+                    print_color(f"Update command failed with exit code {result.returncode}.", Fore.RED)
 
-def get_distro():
-    """Detect Linux distribution ID and version."""
-    if platform.system() != 'Linux':
-        return None, None, None
-    try:
-        with open('/etc/os-release', 'r') as f:
-            lines = f.readlines()
-        os_release = {}
-        for line in lines:
-            if '=' in line:
-                key, value = line.strip().split('=', 1)
-                os_release[key] = value.strip('"')
-        distro_id = os_release.get('ID', '').lower()
-        distro_version = os_release.get('VERSION_ID', '')
-        distro_name = os_release.get('NAME', '')
-        return distro_id, distro_version, distro_name
-    except Exception:
-        return None, None, None
-
-# Allowed distributions and their families – temporarily only Debian and Arch families are active
-ALLOWED_DISTROS = {
-    'debian': ['debian', 'ubuntu', 'kali', 'tails'],  # raspberrypi removed
-    'arch': ['archlinux', 'manjaro'],
-    # 'redhat': ['redhat', 'centos', 'fedora', 'rhel'],
-    # 'suse': ['opensuse'],
-    # 'void': ['void'],
-    # 'slackware': ['slackware'],
-    # 'gentoo': ['gentoo']
-}
-FLAT_ALLOWED = [d for family in ALLOWED_DISTROS.values() for d in family]
-
-def check_allowed_distro(distro_id):
-    """Warn if distribution is not in the allowed list."""
-    if distro_id and distro_id not in FLAT_ALLOWED:
-        print_color(f"Warning: Distribution '{distro_id}' is not in the allowed list. "
-                    f"Package installation may not work correctly.", Fore.YELLOW)
-
-def get_package_manager(distro_id):
-    """Return package manager command and update/install templates based on distro."""
-    if distro_id in ALLOWED_DISTROS['debian']:
-        return {
-            'update': ['sudo', 'apt', 'update'],
-            'install': ['sudo', 'apt', 'install', '-y']
-        }
-    elif distro_id in ALLOWED_DISTROS['arch']:
-        return {
-            'update': ['sudo', 'pacman', '-Sy'],
-            'install': ['sudo', 'pacman', '-S', '--noconfirm']
-        }
-    # elif distro_id in ALLOWED_DISTROS['redhat']:
-    #     if shutil.which('dnf'):
-    #         return {
-    #             'update': ['sudo', 'dnf', 'check-update'],
-    #             'install': ['sudo', 'dnf', 'install', '-y']
-    #         }
-    #     else:
-    #         return {
-    #             'update': ['sudo', 'yum', 'check-update'],
-    #             'install': ['sudo', 'yum', 'install', '-y']
-    #         }
-    # elif distro_id in ALLOWED_DISTROS['suse']:
-    #     return {
-    #         'update': ['sudo', 'zypper', 'refresh'],
-    #         'install': ['sudo', 'zypper', 'install', '-y']
-    #     }
-    # elif distro_id in ALLOWED_DISTROS['void']:
-    #     return {
-    #         'update': ['sudo', 'xbps-install', '-Su'],
-    #         'install': ['sudo', 'xbps-install', '-y']
-    #     }
-    # elif distro_id in ALLOWED_DISTROS['slackware']:
-    #     return {
-    #         'update': [],
-    #         'install': ['sudo', 'slackpkg', 'install']
-    #     }
-    # elif distro_id in ALLOWED_DISTROS['gentoo']:
-    #     return {
-    #         'update': ['sudo', 'emerge', '--sync'],
-    #         'install': ['sudo', 'emerge', '-v']
-    #     }
-    else:
-        return None
-
-def install_missing_packages(missing):
-    """Offer to install missing packages and do so if user agrees."""
-    if not missing:
-        return True
-    print_color(f"Missing required packages: {', '.join(missing)}", Fore.YELLOW)
-    choice = get_choice("Install missing packages?", "YN", default="Y")
-    if choice == 'N':
-        return False
-
-    # Check network connectivity
-    if not check_network():
-        print_color("No internet connection. Cannot install packages.", Fore.RED)
-        return False
-
-    # Determine distribution
-    distro_id, _, _ = get_distro()
-    if not distro_id:
-        print_color("Could not determine Linux distribution. Please install packages manually.", Fore.RED)
-        return False
-
-    pm = get_package_manager(distro_id)
-    if not pm:
-        print_color(f"Unsupported distribution '{distro_id}'. Please install packages manually.", Fore.RED)
-        return False
-
-    # Update package cache if supported
-    if pm['update']:
-        print_color("Updating package cache...", Fore.CYAN)
-        try:
-            subprocess.run(pm['update'], check=True)
-        except subprocess.CalledProcessError:
-            print_color("Failed to update package cache. Proceeding with installation anyway.", Fore.YELLOW)
-
-    # Install missing packages
-    print_color(f"Installing: {' '.join(missing)}", Fore.CYAN)
-    cmd = pm['install'] + missing
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        print_color("Package installation failed.", Fore.RED)
-        return False
-
-    # Verify installation
-    still_missing = [pkg for pkg in missing if shutil.which(pkg) is None]
-    if still_missing:
-        print_color(f"Still missing after installation: {', '.join(still_missing)}", Fore.RED)
-        return False
-
-    print_color("All required packages installed.", Fore.GREEN)
-    return True
-
-def check_dependencies():
-    """Verify required tools are installed; return list of missing."""
-    required = ['cmake', 'make', 'pkg-config', 'gpg']
-    missing = [cmd for cmd in required if shutil.which(cmd) is None]
-    return missing
+        # Ask for installation command
+        print_color(f"Enter installation command for '{cmd_name}' (or press Enter to abort):", Fore.CYAN)
+        install_cmd = input("> ").strip()
+        if not install_cmd:
+            error_exit(f"Aborted due to missing '{cmd_name}'.")
+        result = subprocess.run(install_cmd, shell=True)
+        if result.returncode != 0:
+            print_color(f"Installation command failed with exit code {result.returncode}.", Fore.RED)
+            # Loop again
 
 def get_choice(prompt, options, default=None):
     """
@@ -198,6 +73,7 @@ def get_choice(prompt, options, default=None):
     options: string of allowed characters (e.g., "DR")
     default: default value if user presses Enter
     Returns selected character in uppercase.
+    Pressing Q at any time aborts the script.
     """
     options_upper = options.upper()
     if default:
@@ -210,11 +86,14 @@ def get_choice(prompt, options, default=None):
 
     while True:
         user_input = input(prompt).strip().upper()
+        if user_input == 'Q':
+            print_color("Aborted by user.", Fore.RED)
+            sys.exit(1)
         if not user_input and default:
             return default
         if len(user_input) == 1 and user_input in options_upper:
             return user_input
-        print_color(f"Invalid input. Expected one of: {options_upper}", Fore.YELLOW)
+        print_color(f"Invalid input. Expected one of: {options_upper} (or Q to quit)", Fore.YELLOW)
 
 def get_build_config():
     """Loop to select build configuration with confirmation."""
@@ -276,7 +155,7 @@ def locate_build_file(builder):
     # Remove leftover build directories if present
     leftover_path = src_dir / leftover_dir
     if leftover_path.exists() and leftover_path.is_dir():
-        print_color(f"Removing existing {leftleft_dir} from source directory.", Fore.YELLOW)
+        print_color(f"Removing existing {leftover_dir} from source directory.", Fore.YELLOW)
         shutil.rmtree(leftover_path)
 
     # Also remove CMake cache and other artifacts for a clean build
@@ -291,7 +170,13 @@ def locate_build_file(builder):
     return src_dir
 
 def build_with_cmake(build_dir, build_type, compiler):
-    """Build using CMake."""
+    """Build using CMake. Returns True on success, False on failure."""
+    require_command('cmake')
+    if compiler == 'G':
+        require_command('g++')
+    else:
+        require_command('clang++')
+
     print_color("\n--- Running CMake ---", Fore.CYAN, Style.BRIGHT)
     os.chdir(build_dir)
 
@@ -308,17 +193,27 @@ def build_with_cmake(build_dir, build_type, compiler):
     print_color(f"Executing: {' '.join(cmake_cmd)}", Fore.YELLOW)
     result = subprocess.run(cmake_cmd)
     if result.returncode != 0:
-        error_exit("CMake generation failed.")
+        print_color("CMake generation failed.", Fore.RED)
+        return False
 
     print_color("\n--- Compiling (cmake --build) ---", Fore.CYAN, Style.BRIGHT)
     build_cmd = ['cmake', '--build', '.', '--parallel']
     result = subprocess.run(build_cmd)
     if result.returncode != 0:
-        error_exit("Compilation failed.")
+        print_color("Compilation failed.", Fore.RED)
+        return False
+
     print_color("CMake build completed successfully.", Fore.GREEN)
+    return True
 
 def build_with_make(build_dir, build_type, compiler):
-    """Build using Make."""
+    """Build using Make. Returns True on success, False on failure."""
+    require_command('make')
+    if compiler == 'G':
+        require_command('g++')
+    else:
+        require_command('clang++')
+
     print_color("\n--- Running Make ---", Fore.CYAN, Style.BRIGHT)
     os.chdir(build_dir)
 
@@ -326,15 +221,62 @@ def build_with_make(build_dir, build_type, compiler):
     if compiler == 'G':
         env['CXX'] = 'g++'
     else:
-        env['CXX'] = 'clang++'
+        # For clang++, add -stdlib=libstdc++ to the compiler command itself
+        env['CXX'] = 'clang++ -stdlib=libstdc++'
     env['BUILD'] = 'debug' if build_type == 'D' else 'release'
 
     make_cmd = ['make', '--jobs']
     print_color(f"Executing: {' '.join(make_cmd)} with BUILD={env['BUILD']}, CXX={env.get('CXX','')}", Fore.YELLOW)
     result = subprocess.run(make_cmd, env=env)
     if result.returncode != 0:
-        error_exit("Compilation failed.")
+        print_color("Make build failed.", Fore.RED)
+        return False
+
     print_color("Make build completed successfully.", Fore.GREEN)
+    return True
+
+def prompt_install_commands():
+    """
+    Let the user enter shell commands to install dependencies.
+    Returns after the first successful command (returncode 0) or when user enters an empty line.
+    Failed commands do not exit the prompt.
+    """
+    print_color("Enter installation commands (one per line).", Fore.CYAN)
+    print_color("After a successful command, the build will be retried automatically.", Fore.CYAN)
+    print_color("Press Enter on an empty line to abort this installation attempt.", Fore.CYAN)
+    while True:
+        cmd = input("> ").strip()
+        if not cmd:
+            # User aborts this installation round
+            print_color("No command entered, continuing with build attempt.", Fore.YELLOW)
+            return
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode == 0:
+            print_color("Command succeeded. Retrying build...", Fore.GREEN)
+            return  # Success, exit prompt and retry build
+        else:
+            print_color(f"Command failed with exit code {result.returncode}. You may try another command.", Fore.RED)
+
+def run_build_with_retry(builder, build_dir, build_type, compiler):
+    """Attempt build up to 3 times, prompting for dependency installation on failure."""
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        print_color(f"\n--- Build attempt {attempt}/{max_attempts} ---", Fore.CYAN, Style.BRIGHT)
+        success = False
+        if builder == 'C':
+            success = build_with_cmake(build_dir, build_type, compiler)
+        else:
+            success = build_with_make(build_dir, build_type, compiler)
+
+        if success:
+            return True
+
+        if attempt < max_attempts:
+            print_color("Build failed. You may install missing dependencies.", Fore.YELLOW)
+            prompt_install_commands()
+            print_color("Retrying build...", Fore.CYAN)
+        else:
+            error_exit("Build failed after 3 attempts. Aborting.")
 
 def compute_hashes(file_path):
     """Compute BLAKE2b and SHA256 hashes of a file."""
@@ -355,6 +297,8 @@ def verify_signature(exe_path):
     verify_choice = get_choice("Verify executable signature?", "YN", default="Y")
     if verify_choice == 'N':
         return False
+
+    require_command('gpg')
 
     # Default signature directory is "signature" next to the script
     script_dir = Path.cwd()
@@ -513,26 +457,16 @@ def verify_signature(exe_path):
     return True
 
 def main():
-    check_root()
+    # Check if running as root
+    if os.geteuid() == 0:
+        error_exit("This script must not be run as root. Please run as a normal user.")
 
-    # System and distribution info
+    # System information
     system = platform.system()
     release = platform.release()
-    distro_id, distro_version, distro_name = get_distro()
-    if system == 'Linux' and distro_id:
-        distro_str = f"{distro_name} {distro_version}"
-        print_color(f"System: {distro_str} ({system} {release})", Fore.CYAN)
-        check_allowed_distro(distro_id)
-    else:
-        print_color(f"System: {system} {release}", Fore.CYAN)
+    print_color(f"System: {system} {release}", Fore.CYAN)
 
     print_color("Passport-CLI build script", Fore.GREEN, Style.BRIGHT)
-
-    # Check dependencies and offer installation if missing
-    missing = check_dependencies()
-    if missing:
-        if not install_missing_packages(missing):
-            error_exit(f"Missing required packages: {', '.join(missing)}. Install them and retry.")
 
     build_type, compiler, builder = get_build_config()
 
@@ -541,11 +475,8 @@ def main():
 
     print_color(f"Build directory: {build_dir}", Fore.CYAN)
 
-    # Run the build
-    if builder == 'C':  # CMake
-        build_with_cmake(build_dir, build_type, compiler)
-    else:  # Make
-        build_with_make(build_dir, build_type, compiler)
+    # Run the build with retry logic
+    run_build_with_retry(builder, build_dir, build_type, compiler)
 
     exe_name = "passport-cli"
     exe_path = build_dir / exe_name
