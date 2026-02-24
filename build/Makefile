@@ -133,7 +133,7 @@ ifeq ($(ICU_FOUND),0)
 endif
 
 # ==== Compiler detection and base flags ====
-# Add warning and encoding flags (these are safe for GCC and Clang).
+# Add warning and encoding flags (these are safe for G++ and Clang++).
 CXXFLAGS += -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8
 
 # ==== Build‑type specific flags ====
