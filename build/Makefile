@@ -28,7 +28,12 @@ SOURCES := $(shell find $(SRC_DIR) -name "*.cpp" | sort)
 OBJECTS := $(addprefix $(OBJ_DIR)/,$(patsubst $(SRC_DIR)/%,%,$(SOURCES:.cpp=.cpp.o)))
 
 # ==== Compiler and base flags ====
-CXX = g++
+ifeq ($(origin CXX),default)
+    CXX := $(shell command -v g++ 2>/dev/null || command -v clang++ 2>/dev/null || echo "none")
+    ifeq ($(CXX),none)
+        $(error Neither g++ nor clang++ found. Please install a C++ compiler.)
+    endif
+endif
 CXXFLAGS = -std=c++20
 LDFLAGS =
 LIBS =
@@ -146,6 +151,7 @@ ifeq ($(BUILD),debug)
 else ifeq ($(BUILD),release)
     CXXFLAGS += -O2 -DNDEBUG -g0
     LDFLAGS  += -s
+    LDFLAGS_LINK := -Wl,--build-id=none
 endif
 
 # Add source and module directories to the include path.

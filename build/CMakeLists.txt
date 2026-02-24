@@ -4,6 +4,22 @@
 # Specify the minimum CMake version required for features used.
 cmake_minimum_required(VERSION 3.15)
 
+# Automatically select the C++ compiler: g++ (priority), otherwise clang++
+# If the compiler is already specified in the cache (by the user or a previous build), the block is not executed.
+if(NOT CMAKE_CXX_COMPILER)
+    find_program(GXX_COMPILER g++)
+    find_program(CLANGXX_COMPILER clang++)
+    if(GXX_COMPILER)
+        set(CMAKE_CXX_COMPILER "${GXX_COMPILER}" CACHE PATH "C++ compiler" FORCE)
+        message(STATUS "Automatically selected C++ compiler: g++")
+    elseif(CLANGXX_COMPILER)
+        set(CMAKE_CXX_COMPILER "${CLANGXX_COMPILER}" CACHE PATH "C++ compiler" FORCE)
+        message(STATUS "Automatically selected C++ compiler: clang++")
+    else()
+        message(FATAL_ERROR "Neither g++ nor clang++ found. Please install a C++ compiler.")
+    endif()
+endif()
+
 # Define the project name and declare that only C++ is used.
 project(passport-cli LANGUAGES CXX)
 
@@ -181,6 +197,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(${PROJECT_NAME} PRIVATE -O2 -DNDEBUG -g0)
     target_link_options(${PROJECT_NAME} PRIVATE -s)
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,--build-id=none)
 else()
     message(WARNING "Unknown build type '${CMAKE_BUILD_TYPE}'. Defaulting to Debug flags.")
     target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
