@@ -21,7 +21,7 @@ namespace security::crypto {
 		TypeSystem::derive_type(const std::string& context_string) const {
 		if (!is_initialised()) {
 			throw core::errors::TypeSystemError{
-			  "TypeSystem is not initialised — seeds are missing."
+			  "TypeSystem is not initialised - seeds are missing."
 			};
 		}
 		std::vector<std::uint8_t> input;

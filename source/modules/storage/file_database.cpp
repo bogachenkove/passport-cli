@@ -243,7 +243,7 @@ namespace security::storage {
 			}
 			else {
 				throw core::errors::DeserialisationError{
-				  "Unknown record type identifier — database may be corrupted or "
+				  "Unknown record type identifier - database may be corrupted or "
 				  "created by an incompatible version."
 				};
 			}
