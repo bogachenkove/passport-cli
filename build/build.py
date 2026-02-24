@@ -1,202 +1,253 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
-Universal build script for passport-cli.
-Guides the user through compiler selection and build process using CMake or Make.
+Build script for passport-cli project.
+Allows selection of build type, compiler, and build system.
 """
 
 import os
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
+import hashlib
 from pathlib import Path
 
-# Attempt to import colorama for colored terminal output.
-# If missing, provide a fallback that disables colors.
+# Optional color output
 try:
     from colorama import init, Fore, Style
     init(autoreset=True)
-    HAVE_COLORAMA = True
+    COLORAMA_AVAILABLE = True
 except ImportError:
-    print("""ERROR: Colorama library is not installed.
-Please install it using: pip install colorama
-Or run the script without colorama support (colors will be disabled).""")
-    HAVE_COLORAMA = False
-    # Dummy color classes when colorama is absent.
+    COLORAMA_AVAILABLE = False
     class Fore:
-        RED = GREEN = YELLOW = BLUE = RESET = ''
-    Style = Fore
+        RED = GREEN = YELLOW = CYAN = RESET = ''
+    class Style:
+        BRIGHT = RESET_ALL = ''
 
-def print_color(level, msg, end='\n'):
-    """Print a message with a colored level prefix.
-    level: one of 'INFO', 'WARN', 'ERROR', 'PROMPT'.
-    msg: the message text.
-    end: line ending (default newline)."""
-    if level == 'INFO':
-        print(f"{Fore.GREEN}[INFO]{Style.RESET_ALL} {msg}", end=end)
-    elif level == 'WARN':
-        print(f"{Fore.YELLOW}[WARN]{Style.RESET_ALL} {msg}", end=end)
-    elif level == 'ERROR':
-        print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} {msg}", end=end)
-    elif level == 'PROMPT':
-        print(f"{Fore.BLUE}[PROMPT]{Style.RESET_ALL} {msg}", end=end)
+def print_color(message, color=Fore.RESET, brightness=Style.RESET_ALL):
+    if COLORAMA_AVAILABLE:
+        print(f"{brightness}{color}{message}{Style.RESET_ALL}")
     else:
-        print(msg, end=end)
+        print(message)
 
-def run_cmd(cmd, check=True, capture=False, shell=False):
-    """Execute a shell command.
-    If capture=True, return (stdout, stderr, returncode).
-    Otherwise, run and optionally check for errors."""
-    if capture:
-        result = subprocess.run(cmd, shell=shell, capture_output=True, text=True)
-        return result.stdout.strip(), result.stderr.strip(), result.returncode
-    else:
-        subprocess.run(cmd, shell=shell, check=check)
-
-def check_command(cmd):
-    """Return True if the command is available in the system PATH."""
-    return shutil.which(cmd) is not None
-
-def get_choice(prompt_text, allowed, default):
-    """Prompt the user for a single‑letter choice.
-    - prompt_text: the prompt message (printed without newline).
-    - allowed: set of allowed characters (lowercase).
-    - default: default letter if user presses Enter.
-    Returns the selected letter (lowercase). Exits on invalid input."""
-    print_color('PROMPT', prompt_text, end='')
-    ans = input().strip().lower()
-    if ans == '':
-        return default
-    if ans in allowed:
-        return ans
-    print_color('ERROR', f"Invalid choice. Expected one of: {', '.join(sorted(allowed)).upper()}")
+def error_exit(message):
+    print_color(f"Error: {message}", Fore.RED, Style.BRIGHT)
     sys.exit(1)
 
-def main():
-    """Main build routine: verify tools, select options, and run build."""
-    # ==== 1. Verify essential build tools ====
-    print_color('INFO', "Checking required tools...")
-    tools_to_check = ['cmake', 'make', 'pkg-config']
-    missing_tools = [tool for tool in tools_to_check if not check_command(tool)]
+def check_dependencies():
+    """Verify required tools are installed."""
+    required = ['cmake', 'make', 'pkg-config']
+    missing = [cmd for cmd in required if shutil.which(cmd) is None]
+    if missing:
+        error_exit(f"Missing required packages: {', '.join(missing)}. Install them and retry.")
+    print_color("All dependencies found.", Fore.GREEN)
 
-    if missing_tools:
-        print_color('ERROR', f"Missing required tools: {', '.join(missing_tools)}")
-        print_color('ERROR', "Please install them and try again.")
-        sys.exit(1)
+def get_choice(prompt, options, default=None):
+    """
+    Universal choice selector.
+    prompt: text prompt
+    options: string of allowed characters (e.g., "YN", "DR", "GC", "CM")
+    default: default value if user presses Enter
+    Returns selected character in uppercase.
+    """
+    options_upper = options.upper()
+    if default:
+        default = default.upper()
+        if default not in options_upper:
+            raise ValueError(f"Default '{default}' not in allowed options '{options_upper}'")
+        prompt = f"{prompt} [{options_upper}] (default: {default}): "
     else:
-        print_color('INFO', "All required tools are present.")
+        prompt = f"{prompt} [{options_upper}]: "
 
-    # ==== 2. Choose build type (Release/Debug) ====
-    choice = get_choice(
-        "Build type: [R]elease or [D]ebug? (default Release): ",
-        allowed={'r', 'd'},
-        default='r'
-    )
-    build_type = 'Release' if choice == 'r' else 'Debug'
-    print_color('INFO', f"Build type: {build_type}")
+    while True:
+        user_input = input(prompt).strip().upper()
+        if not user_input and default:
+            return default
+        if len(user_input) == 1 and user_input in options_upper:
+            return user_input
+        print_color(f"Invalid input. Expected one of: {options_upper}", Fore.YELLOW)
 
-    # ==== 3. Detect and select C++ compiler ====
-    compiler_map = {}
-    if check_command('g++'):
-        compiler_map['g'] = 'g++'
-    if check_command('clang'):
-        compiler_map['c'] = 'clang'
-    if check_command('clang++'):
-        compiler_map['a'] = 'clang++'
+def get_build_config():
+    """Loop to select build configuration with confirmation."""
+    while True:
+        print_color("\n--- Build Configuration ---", Fore.CYAN, Style.BRIGHT)
+        build_type = get_choice("Build type", "DR", default="R")
+        compiler = get_choice("Compiler", "GC", default="G")
+        builder = get_choice("Build system", "CM", default="C")
 
-    if not compiler_map:
-        print_color('ERROR', "No C++ compiler found. Please install g++ or clang++.")
-        sys.exit(1)
+        type_map = {'D': 'Debug', 'R': 'Release'}
+        compiler_map = {'G': 'G++', 'C': 'Clang++'}
+        builder_map = {'C': 'CMake', 'M': 'Make'}
 
-    allowed_compilers = set(compiler_map.keys())
-    # Default to g++ if available, otherwise the first available.
-    default_compiler = 'g' if 'g' in allowed_compilers else next(iter(allowed_compilers))
+        print_color("\n--- Selected Configuration ---", Fore.CYAN)
+        print(f"  Build type:   {type_map[build_type]}")
+        print(f"  Compiler:     {compiler_map[compiler]}")
+        print(f"  Build system: {builder_map[builder]}")
 
-    choice = get_choice(
-        "Compiler type: [G]++, [C]lang or Cl[A]ng++ (default G++): ",
-        allowed=allowed_compilers,
-        default=default_compiler
-    )
-    selected_compiler = compiler_map[choice]
-    print_color('INFO', f"Selected compiler: {selected_compiler}")
+        confirm = get_choice("Proceed with this configuration?", "YN", default="Y")
+        if confirm == 'Y':
+            return build_type, compiler, builder
+        else:
+            print_color("Re-enter configuration...", Fore.YELLOW)
 
-    # ==== 4. Choose build system (CMake or Make) ====
-    script_dir = Path(__file__).parent.resolve()
-    builder_map = {}
-    if (script_dir / 'CMakeLists.txt').exists():
-        builder_map['c'] = 'cmake'
-    if (script_dir / 'Makefile').exists():
-        builder_map['m'] = 'make'
+def locate_build_file(builder):
+    """
+    Locate the build system file (CMakeLists.txt or Makefile).
+    If not found in current directory, prompt user for path.
+    Also check for leftover build directories (CMakeFiles or MakeFiles) and remove them.
+    Returns the absolute path to the directory containing the file.
+    """
+    script_dir = Path.cwd()
+    if builder == 'C':
+        filename = "CMakeLists.txt"
+        leftover_dir = "CMakeFiles"
+    else:
+        filename = "Makefile"
+        leftover_dir = "MakeFiles"
 
-    if not builder_map:
-        print_color('ERROR', "Neither CMakeLists.txt nor Makefile found in build directory.")
-        sys.exit(1)
+    # Check current directory
+    candidate = script_dir / filename
+    if candidate.exists():
+        print_color(f"Found {filename} in current directory.", Fore.GREEN)
+        src_dir = script_dir
+    else:
+        print_color(f"{filename} not found in current directory.", Fore.YELLOW)
+        while True:
+            user_path = input(f"Enter path to directory containing {filename}: ").strip()
+            if not user_path:
+                continue
+            path = Path(user_path).expanduser().resolve()
+            if (path / filename).exists():
+                src_dir = path
+                print_color(f"Using {filename} from {src_dir}", Fore.GREEN)
+                break
+            else:
+                print_color(f"{filename} not found in {path}. Try again.", Fore.YELLOW)
 
-    allowed_builders = set(builder_map.keys())
-    default_builder = 'c' if 'c' in allowed_builders else 'm'
+    # Remove leftover build directories if present
+    leftover_path = src_dir / leftover_dir
+    if leftover_path.exists() and leftover_path.is_dir():
+        print_color(f"Removing existing {leftover_dir} from source directory.", Fore.YELLOW)
+        shutil.rmtree(leftover_path)
 
-    choice = get_choice(
-        "Select builder: [C]Make or [M]ake (default CMake): ",
-        allowed=allowed_builders,
-        default=default_builder
-    )
-    builder = builder_map[choice]
-    print_color('INFO', f"Selected builder: {builder.capitalize()}")
+    return src_dir
 
-    # ==== 5. Prepare environment and run the build ====
-    os.chdir(script_dir)
+def prepare_build_dir():
+    """Create and clean build-dev directory."""
+    build_dir = Path.cwd() / "build-dev"
+    if build_dir.exists():
+        # Clean existing directory
+        for item in build_dir.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
+    else:
+        build_dir.mkdir()
+    return build_dir
+
+def copy_build_file(src_dir, builder, dst_dir):
+    """Copy build file from src_dir to build-dev directory."""
+    filename = "CMakeLists.txt" if builder == 'C' else "Makefile"
+    src = src_dir / filename
+    dst = dst_dir / filename
+    shutil.copy(src, dst)
+    return dst
+
+def build_with_cmake(build_dir, build_type, compiler):
+    """Build using CMake."""
+    print_color("\n--- Running CMake ---", Fore.CYAN, Style.BRIGHT)
+    os.chdir(build_dir)
+
+    cmake_cmd = ['cmake', '..']
+    cmake_cmd.append(f'-DCMAKE_BUILD_TYPE={"Debug" if build_type=="D" else "Release"}')
+    if compiler == 'G':
+        cmake_cmd.append('-DCMAKE_CXX_COMPILER=g++')
+    else:  # Clang++
+        cmake_cmd.extend([
+            '-DCMAKE_CXX_COMPILER=clang++',
+            '-DCMAKE_CXX_FLAGS=-stdlib=libstdc++'
+        ])
+
+    print_color(f"Executing: {' '.join(cmake_cmd)}", Fore.YELLOW)
+    result = subprocess.run(cmake_cmd)
+    if result.returncode != 0:
+        error_exit("CMake generation failed.")
+
+    print_color("\n--- Compiling (cmake --build) ---", Fore.CYAN, Style.BRIGHT)
+    build_cmd = ['cmake', '--build', '.', '--parallel']
+    result = subprocess.run(build_cmd)
+    if result.returncode != 0:
+        error_exit("Compilation failed.")
+    print_color("CMake build completed successfully.", Fore.GREEN)
+
+def build_with_make(build_dir, build_type, compiler):
+    """Build using Make."""
+    print_color("\n--- Running Make ---", Fore.CYAN, Style.BRIGHT)
+    os.chdir(build_dir)
+
     env = os.environ.copy()
-    env['CXX'] = selected_compiler
-
-    # Set additional compiler flags based on the chosen compiler.
-    if selected_compiler == 'g++':
-        # g++ works out‑of‑the‑box with default settings.
-        pass
-    elif selected_compiler == 'clang':
-        # When using clang as a C compiler for C++, we must explicitly link libstdc++.
-        env['CXXFLAGS'] = env.get('CXXFLAGS', '') + ' -stdlib=libstdc++'
-        env['LDFLAGS'] = env.get('LDFLAGS', '') + ' -lstdc++'
-    elif selected_compiler == 'clang++':
-        # clang++ automatically links the C++ standard library; we just set the runtime.
-        env['CXXFLAGS'] = env.get('CXXFLAGS', '') + ' -stdlib=libstdc++'
-
-    if builder == 'cmake':
-        print_color('INFO', "Configuring with CMake...")
-        cmake_cmd = ['cmake', f'-DCMAKE_BUILD_TYPE={build_type}', '.']
-        if selected_compiler:
-            cmake_cmd.insert(1, f'-DCMAKE_CXX_COMPILER={selected_compiler}')
-        try:
-            subprocess.run(cmake_cmd, env=env, check=True)
-        except subprocess.CalledProcessError:
-            print_color('ERROR', "CMake configuration failed.")
-            sys.exit(1)
-        print_color('INFO', "Building...")
-        try:
-            subprocess.run(['cmake', '--build', '.', '--config', build_type, '--parallel'], env=env, check=True)
-        except subprocess.CalledProcessError:
-            print_color('ERROR', "Build failed.")
-            sys.exit(1)
-    else:  # make
-        print_color('INFO', "Building with Make...")
-        build_lower = build_type.lower()
-        make_cmd = ['make', f'BUILD={build_lower}', '-j', str(os.cpu_count() or 2)]
-        try:
-            subprocess.run(make_cmd, env=env, check=True)
-        except subprocess.CalledProcessError:
-            print_color('ERROR', "Make build failed.")
-            sys.exit(1)
-
-    # ==== 6. Verify that the executable was created ====
-    bin_name = 'passport-cli'
-    bin_path = script_dir / bin_name
-    if bin_path.exists():
-        print_color('INFO', f"Build successful! Executable: {bin_path}")
+    if compiler == 'G':
+        env['CXX'] = 'g++'
     else:
-        print_color('ERROR', f"Executable {bin_name} not found after build.")
-        sys.exit(1)
+        env['CXX'] = 'clang++'
+    env['BUILD'] = 'debug' if build_type == 'D' else 'release'
 
-    print_color('INFO', "Build script finished successfully.")
+    make_cmd = ['make', '--jobs']
+    print_color(f"Executing: {' '.join(make_cmd)} with BUILD={env['BUILD']}, CXX={env.get('CXX','')}", Fore.YELLOW)
+    result = subprocess.run(make_cmd, env=env)
+    if result.returncode != 0:
+        error_exit("Compilation failed.")
+    print_color("Make build completed successfully.", Fore.GREEN)
 
-if __name__ == '__main__':
+def compute_hashes(file_path):
+    """Compute BLAKE2b and SHA256 hashes of a file."""
+    if not file_path.exists():
+        return None, None
+    with open(file_path, 'rb') as f:
+        data = f.read()
+    blake2 = hashlib.blake2b(data).hexdigest()
+    sha256 = hashlib.sha256(data).hexdigest()
+    return blake2, sha256
+
+def main():
+    if not COLORAMA_AVAILABLE:
+        print("Warning: Colorama not installed, output will be monochrome.")
+    print_color("passport-cli build script", Fore.GREEN, Style.BRIGHT)
+
+    check_dependencies()
+
+    build_type, compiler, builder = get_build_config()
+
+    # Locate the build system file and clean leftovers
+    src_dir = locate_build_file(builder)
+
+    # Prepare build directory
+    build_dir = prepare_build_dir()
+    print_color(f"Working directory: {build_dir}", Fore.CYAN)
+
+    # Copy the appropriate build file
+    copy_build_file(src_dir, builder, build_dir)
+
+    # Run the build
+    if builder == 'C':  # CMake
+        build_with_cmake(build_dir, build_type, compiler)
+    else:  # Make
+        build_with_make(build_dir, build_type, compiler)
+
+    exe_name = "passport-cli"
+    exe_path = build_dir / exe_name
+    if not exe_path.exists():
+        error_exit(f"Executable {exe_name} not found in {build_dir}.")
+
+    blake2_hash, sha256_hash = compute_hashes(exe_path)
+    if blake2_hash and sha256_hash:
+        print_color("\n--- Hashes of built executable ---", Fore.CYAN, Style.BRIGHT)
+        print(f"BLAKE2b: {blake2_hash}")
+        print(f"SHA256:  {sha256_hash}")
+    else:
+        print_color("Unable to compute hashes.", Fore.YELLOW)
+
+    print_color("\nBuild completed successfully!", Fore.GREEN, Style.BRIGHT)
+
+if __name__ == "__main__":
     main()
