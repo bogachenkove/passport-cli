@@ -35,12 +35,161 @@ def error_exit(message):
     print_color(f"Error: {message}", Fore.RED, Style.BRIGHT)
     sys.exit(1)
 
+def check_root():
+    """Ensure script is not run as root."""
+    if os.geteuid() == 0:
+        error_exit("This script should not be run as root. Please run as a normal user.")
+
+def check_network():
+    """Check internet connectivity by pinging a reliable host."""
+    try:
+        subprocess.run(['ping', '-c', '1', '8.8.8.8'],
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL,
+                       check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def get_distro():
+    """Detect Linux distribution ID and version."""
+    if platform.system() != 'Linux':
+        return None, None, None
+    try:
+        with open('/etc/os-release', 'r') as f:
+            lines = f.readlines()
+        os_release = {}
+        for line in lines:
+            if '=' in line:
+                key, value = line.strip().split('=', 1)
+                os_release[key] = value.strip('"')
+        distro_id = os_release.get('ID', '').lower()
+        distro_version = os_release.get('VERSION_ID', '')
+        distro_name = os_release.get('NAME', '')
+        return distro_id, distro_version, distro_name
+    except Exception:
+        return None, None, None
+
+# Allowed distributions and their families – temporarily only Debian and Arch families are active
+ALLOWED_DISTROS = {
+    'debian': ['debian', 'ubuntu', 'kali', 'tails'],  # raspberrypi removed
+    'arch': ['archlinux', 'manjaro'],
+    # 'redhat': ['redhat', 'centos', 'fedora', 'rhel'],
+    # 'suse': ['opensuse'],
+    # 'void': ['void'],
+    # 'slackware': ['slackware'],
+    # 'gentoo': ['gentoo']
+}
+FLAT_ALLOWED = [d for family in ALLOWED_DISTROS.values() for d in family]
+
+def check_allowed_distro(distro_id):
+    """Warn if distribution is not in the allowed list."""
+    if distro_id and distro_id not in FLAT_ALLOWED:
+        print_color(f"Warning: Distribution '{distro_id}' is not in the allowed list. "
+                    f"Package installation may not work correctly.", Fore.YELLOW)
+
+def get_package_manager(distro_id):
+    """Return package manager command and update/install templates based on distro."""
+    if distro_id in ALLOWED_DISTROS['debian']:
+        return {
+            'update': ['sudo', 'apt', 'update'],
+            'install': ['sudo', 'apt', 'install', '-y']
+        }
+    elif distro_id in ALLOWED_DISTROS['arch']:
+        return {
+            'update': ['sudo', 'pacman', '-Sy'],
+            'install': ['sudo', 'pacman', '-S', '--noconfirm']
+        }
+    # elif distro_id in ALLOWED_DISTROS['redhat']:
+    #     if shutil.which('dnf'):
+    #         return {
+    #             'update': ['sudo', 'dnf', 'check-update'],
+    #             'install': ['sudo', 'dnf', 'install', '-y']
+    #         }
+    #     else:
+    #         return {
+    #             'update': ['sudo', 'yum', 'check-update'],
+    #             'install': ['sudo', 'yum', 'install', '-y']
+    #         }
+    # elif distro_id in ALLOWED_DISTROS['suse']:
+    #     return {
+    #         'update': ['sudo', 'zypper', 'refresh'],
+    #         'install': ['sudo', 'zypper', 'install', '-y']
+    #     }
+    # elif distro_id in ALLOWED_DISTROS['void']:
+    #     return {
+    #         'update': ['sudo', 'xbps-install', '-Su'],
+    #         'install': ['sudo', 'xbps-install', '-y']
+    #     }
+    # elif distro_id in ALLOWED_DISTROS['slackware']:
+    #     return {
+    #         'update': [],
+    #         'install': ['sudo', 'slackpkg', 'install']
+    #     }
+    # elif distro_id in ALLOWED_DISTROS['gentoo']:
+    #     return {
+    #         'update': ['sudo', 'emerge', '--sync'],
+    #         'install': ['sudo', 'emerge', '-v']
+    #     }
+    else:
+        return None
+
+def install_missing_packages(missing):
+    """Offer to install missing packages and do so if user agrees."""
+    if not missing:
+        return True
+    print_color(f"Missing required packages: {', '.join(missing)}", Fore.YELLOW)
+    choice = get_choice("Install missing packages?", "YN", default="Y")
+    if choice == 'N':
+        return False
+
+    # Check network connectivity
+    if not check_network():
+        print_color("No internet connection. Cannot install packages.", Fore.RED)
+        return False
+
+    # Determine distribution
+    distro_id, _, _ = get_distro()
+    if not distro_id:
+        print_color("Could not determine Linux distribution. Please install packages manually.", Fore.RED)
+        return False
+
+    pm = get_package_manager(distro_id)
+    if not pm:
+        print_color(f"Unsupported distribution '{distro_id}'. Please install packages manually.", Fore.RED)
+        return False
+
+    # Update package cache if supported
+    if pm['update']:
+        print_color("Updating package cache...", Fore.CYAN)
+        try:
+            subprocess.run(pm['update'], check=True)
+        except subprocess.CalledProcessError:
+            print_color("Failed to update package cache. Proceeding with installation anyway.", Fore.YELLOW)
+
+    # Install missing packages
+    print_color(f"Installing: {' '.join(missing)}", Fore.CYAN)
+    cmd = pm['install'] + missing
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        print_color("Package installation failed.", Fore.RED)
+        return False
+
+    # Verify installation
+    still_missing = [pkg for pkg in missing if shutil.which(pkg) is None]
+    if still_missing:
+        print_color(f"Still missing after installation: {', '.join(still_missing)}", Fore.RED)
+        return False
+
+    print_color("All required packages installed.", Fore.GREEN)
+    return True
+
 def check_dependencies():
-    """Verify required tools are installed."""
-    required = ['cmake', 'make', 'pkg-config']
+    """Verify required tools are installed; return list of missing."""
+    required = ['cmake', 'make', 'pkg-config', 'gpg']
     missing = [cmd for cmd in required if shutil.which(cmd) is None]
-    if missing:
-        error_exit(f"Missing required packages: {', '.join(missing)}. Install them and retry.")
+    return missing
 
 def get_choice(prompt, options, default=None):
     """
@@ -127,7 +276,7 @@ def locate_build_file(builder):
     # Remove leftover build directories if present
     leftover_path = src_dir / leftover_dir
     if leftover_path.exists() and leftover_path.is_dir():
-        print_color(f"Removing existing {leftover_dir} from source directory.", Fore.YELLOW)
+        print_color(f"Removing existing {leftleft_dir} from source directory.", Fore.YELLOW)
         shutil.rmtree(leftover_path)
 
     # Also remove CMake cache and other artifacts for a clean build
@@ -197,15 +346,193 @@ def compute_hashes(file_path):
     sha256 = hashlib.sha256(data).hexdigest()
     return blake2, sha256
 
+def verify_signature(exe_path):
+    """
+    Verify the built executable against signed checksums.
+    Returns True if verification succeeds, False if user skips.
+    """
+    print_color("\n--- Signature Verification ---", Fore.CYAN, Style.BRIGHT)
+    verify_choice = get_choice("Verify executable signature?", "YN", default="Y")
+    if verify_choice == 'N':
+        return False
+
+    # Default signature directory is "signature" next to the script
+    script_dir = Path.cwd()
+    sig_dir_default = script_dir / "signature"
+
+    # Required files structure
+    required_files = {
+        'public_key': ('publickey.asc', None),
+        'sha256_sums': ('SHA256/SHA256SUMS', None),
+        'sha256_sums_asc': ('SHA256/SHA256SUMS.asc', None),
+        'blake2b_sums': ('BLAKE2b/BLAKE2BSUMS', None),
+        'blake2b_sums_asc': ('BLAKE2b/BLAKE2BSUMS.asc', None)
+    }
+
+    # First, check if default signature directory exists and contains files
+    def check_file(rel_path):
+        full = sig_dir_default / rel_path
+        return full if full.exists() else None
+
+    for key, (rel_path, _) in required_files.items():
+        found = check_file(rel_path)
+        required_files[key] = (rel_path, found)
+
+    # For any missing file, prompt user for its path
+    missing = [(key, rel_path) for key, (rel_path, path) in required_files.items() if path is None]
+    if missing:
+        print_color("Some signature files are missing. Please provide paths.", Fore.YELLOW)
+        for key, rel_path in missing:
+            while True:
+                user_input = input(f"Enter path to {rel_path}: ").strip()
+                if not user_input:
+                    continue
+                user_path = Path(user_input).expanduser().resolve()
+                if user_path.exists():
+                    required_files[key] = (rel_path, user_path)
+                    break
+                else:
+                    print_color(f"File not found: {user_path}", Fore.YELLOW)
+
+    # Extract actual paths
+    pubkey_path = required_files['public_key'][1]
+    sha256_sums_path = required_files['sha256_sums'][1]
+    sha256_sums_asc_path = required_files['sha256_sums_asc'][1]
+    blake2b_sums_path = required_files['blake2b_sums'][1]
+    blake2b_sums_asc_path = required_files['blake2b_sums_asc'][1]
+
+    # Import public key if not already in keyring
+    print_color("Checking public key...", Fore.CYAN)
+    # Extract key ID from public key file
+    try:
+        result = subprocess.run(['gpg', '--with-colons', '--import-options', 'show-only', '--import', str(pubkey_path)],
+                                capture_output=True, text=True, check=False)
+        # Parse fingerprint from output (simplified: look for fpr record)
+        key_id = None
+        for line in result.stdout.splitlines():
+            if line.startswith('fpr:'):
+                parts = line.split(':')
+                if len(parts) > 9:
+                    key_id = parts[9]  # fingerprint
+                    break
+        if not key_id:
+            print_color("Could not extract key ID from public key file.", Fore.YELLOW)
+            key_id = None
+    except Exception as e:
+        print_color(f"Error reading public key: {e}", Fore.YELLOW)
+        key_id = None
+
+    # Check if key is already in keyring
+    key_present = False
+    if key_id:
+        result = subprocess.run(['gpg', '--list-keys', '--with-colons', key_id],
+                                capture_output=True, text=True, check=False)
+        key_present = result.returncode == 0
+
+    if not key_present:
+        print_color("Importing public key...", Fore.CYAN)
+        result = subprocess.run(['gpg', '--import', str(pubkey_path)], capture_output=True, text=True)
+        if result.returncode != 0:
+            print_color(f"Failed to import public key: {result.stderr}", Fore.RED)
+            return False
+        else:
+            print_color("Public key imported.", Fore.GREEN)
+    else:
+        print_color("Public key already present in keyring.", Fore.GREEN)
+
+    # Verify signatures
+    print_color("\nVerifying SHA256 checksums signature...", Fore.CYAN)
+    result = subprocess.run(['gpg', '--verify', str(sha256_sums_asc_path), str(sha256_sums_path)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        print_color(f"SHA256 signature verification failed: {result.stderr}", Fore.RED)
+        return False
+    else:
+        print_color("SHA256 signature is valid.", Fore.GREEN)
+
+    print_color("Verifying BLAKE2b checksums signature...", Fore.CYAN)
+    result = subprocess.run(['gpg', '--verify', str(blake2b_sums_asc_path), str(blake2b_sums_path)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        print_color(f"BLAKE2b signature verification failed: {result.stderr}", Fore.RED)
+        return False
+    else:
+        print_color("BLAKE2b signature is valid.", Fore.GREEN)
+
+    # Compute hashes of built executable
+    exe_name = "passport-cli"
+    exe_full = exe_path / exe_name if exe_path.is_dir() else exe_path
+    if not exe_full.exists():
+        print_color(f"Executable {exe_name} not found at {exe_full}", Fore.RED)
+        return False
+
+    blake2_hash, sha256_hash = compute_hashes(exe_full)
+    if not blake2_hash or not sha256_hash:
+        print_color("Failed to compute hashes.", Fore.RED)
+        return False
+
+    # Check SHA256
+    print_color("\nChecking SHA256 hash against checksums file...", Fore.CYAN)
+    with open(sha256_sums_path, 'r') as f:
+        sha256_content = f.read()
+    # Expect format: "hash  filename" or "hash *filename"
+    found = False
+    for line in sha256_content.splitlines():
+        parts = line.strip().split()
+        if len(parts) >= 2:
+            file_hash = parts[0]
+            # filename might have * or space
+            if exe_name in line and sha256_hash == file_hash:
+                found = True
+                break
+    if found:
+        print_color("SHA256 hash matches.", Fore.GREEN)
+    else:
+        print_color("SHA256 hash does NOT match any entry in checksums file.", Fore.RED)
+        return False
+
+    # Check BLAKE2b
+    print_color("Checking BLAKE2b hash against checksums file...", Fore.CYAN)
+    with open(blake2b_sums_path, 'r') as f:
+        blake2b_content = f.read()
+    found = False
+    for line in blake2b_content.splitlines():
+        parts = line.strip().split()
+        if len(parts) >= 2:
+            file_hash = parts[0]
+            if exe_name in line and blake2_hash == file_hash:
+                found = True
+                break
+    if found:
+        print_color("BLAKE2b hash matches.", Fore.GREEN)
+    else:
+        print_color("BLAKE2b hash does NOT match any entry in checksums file.", Fore.RED)
+        return False
+
+    print_color("\nAll signature and hash verifications passed.", Fore.GREEN, Style.BRIGHT)
+    return True
+
 def main():
-    # System information
+    check_root()
+
+    # System and distribution info
     system = platform.system()
     release = platform.release()
-    print_color(f"System: {system} {release}", Fore.CYAN)
+    distro_id, distro_version, distro_name = get_distro()
+    if system == 'Linux' and distro_id:
+        distro_str = f"{distro_name} {distro_version}"
+        print_color(f"System: {distro_str} ({system} {release})", Fore.CYAN)
+        check_allowed_distro(distro_id)
+    else:
+        print_color(f"System: {system} {release}", Fore.CYAN)
 
     print_color("Passport-CLI build script", Fore.GREEN, Style.BRIGHT)
 
-    check_dependencies()
+    # Check dependencies and offer installation if missing
+    missing = check_dependencies()
+    if missing:
+        if not install_missing_packages(missing):
+            error_exit(f"Missing required packages: {', '.join(missing)}. Install them and retry.")
 
     build_type, compiler, builder = get_build_config()
 
@@ -232,6 +559,9 @@ def main():
         print(f"SHA256:  {sha256_hash}")
     else:
         print_color("Unable to compute hashes.", Fore.YELLOW)
+
+    # Optional signature verification
+    verify_signature(build_dir)
 
     print_color("\nBuild completed successfully!", Fore.GREEN, Style.BRIGHT)
 
