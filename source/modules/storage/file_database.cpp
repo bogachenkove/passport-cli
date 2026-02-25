@@ -32,58 +32,82 @@ namespace security::storage {
 		const auto trans_type = type_system_.transportcard_type();
 		const auto mnem_type = type_system_.mnemonicphrase_type();
 		for (const auto& r : password_records_) {
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.login);
+			filesystem::storage::binary_serializer::write_field(record_data, r.password);
+			filesystem::storage::binary_serializer::write_field(record_data, r.url);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
 			buf.insert(buf.end(), pw_type.begin(), pw_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			filesystem::storage::binary_serializer::write_field(buf, r.login);
-			filesystem::storage::binary_serializer::write_field(buf, r.password);
-			filesystem::storage::binary_serializer::write_field(buf, r.url);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		for (const auto& r : note_records_) {
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.title);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
 			buf.insert(buf.end(), note_type.begin(), note_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			filesystem::storage::binary_serializer::write_field(buf, r.title);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		for (const auto& r : bankcard_records_) {
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.card_number);
+			filesystem::storage::binary_serializer::write_field(record_data, r.expiry_date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.cvv);
+			filesystem::storage::binary_serializer::write_field(record_data, r.cardholder_name);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
 			buf.insert(buf.end(), bank_type.begin(), bank_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			filesystem::storage::binary_serializer::write_field(buf, r.card_number);
-			filesystem::storage::binary_serializer::write_field(buf, r.expiry_date);
-			filesystem::storage::binary_serializer::write_field(buf, r.cvv);
-			filesystem::storage::binary_serializer::write_field(buf, r.cardholder_name);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		for (const auto& r : discount_records_) {
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.card_number);
+			filesystem::storage::binary_serializer::write_field(record_data, r.barcode);
+			filesystem::storage::binary_serializer::write_field(record_data, r.cvv);
+			filesystem::storage::binary_serializer::write_field(record_data, r.store_name);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
 			buf.insert(buf.end(), disc_type.begin(), disc_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			filesystem::storage::binary_serializer::write_field(buf, r.card_number);
-			filesystem::storage::binary_serializer::write_field(buf, r.barcode);
-			filesystem::storage::binary_serializer::write_field(buf, r.cvv);
-			filesystem::storage::binary_serializer::write_field(buf, r.store_name);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		for (const auto& r : transport_records_) {
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			filesystem::storage::binary_serializer::write_field(record_data, r.card_number);
+			filesystem::storage::binary_serializer::write_field(record_data, r.barcode);
+			filesystem::storage::binary_serializer::write_field(record_data, r.expiry);
+			filesystem::storage::binary_serializer::write_field(record_data, r.holder);
+			filesystem::storage::binary_serializer::write_field(record_data, r.cvv);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
 			buf.insert(buf.end(), trans_type.begin(), trans_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			filesystem::storage::binary_serializer::write_field(buf, r.card_number);
-			filesystem::storage::binary_serializer::write_field(buf, r.barcode);
-			filesystem::storage::binary_serializer::write_field(buf, r.expiry);
-			filesystem::storage::binary_serializer::write_field(buf, r.holder);
-			filesystem::storage::binary_serializer::write_field(buf, r.cvv);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		for (const auto& r : mnemonicphrase_records_) {
-			buf.insert(buf.end(), mnem_type.begin(), mnem_type.end());
-			core::endian::append_u64_be(buf, r.date);
-			core::endian::append_u64_be(buf, r.mnemonic.size());
+			std::vector<std::uint8_t> record_data;
+			core::endian::append_u64_be(record_data, r.date);
+			core::endian::append_u64_be(record_data, r.mnemonic.size());
 			for (const auto& word : r.mnemonic) {
-				filesystem::storage::binary_serializer::write_field(buf, word);
+				filesystem::storage::binary_serializer::write_field(record_data, word);
 			}
-			filesystem::storage::binary_serializer::write_field(buf, r.passphrase);
-			filesystem::storage::binary_serializer::write_field(buf, r.language);
-			core::endian::append_u32_be(buf, r.iteration);
-			filesystem::storage::binary_serializer::write_field(buf, r.note);
+			filesystem::storage::binary_serializer::write_field(record_data, r.passphrase);
+			filesystem::storage::binary_serializer::write_field(record_data, r.language);
+			core::endian::append_u32_be(record_data, r.iteration);
+			filesystem::storage::binary_serializer::write_field(record_data, r.note);
+			uint32_t total_len = 4 + 32 + static_cast<uint32_t>(record_data.size());
+			core::endian::append_u32_be(buf, total_len);
+			buf.insert(buf.end(), mnem_type.begin(), mnem_type.end());
+			buf.insert(buf.end(), record_data.begin(), record_data.end());
 		}
 		return buf;
 	}
@@ -122,21 +146,35 @@ namespace security::storage {
 		const auto trans_type = type_system_.transportcard_type();
 		const auto mnem_type = type_system_.mnemonicphrase_type();
 		while (offset < plaintext.size()) {
+			if (offset + 4 > plaintext.size()) {
+				throw core::errors::DeserialisationError{
+				  "Truncated record: missing length field."
+				};
+			}
+			uint32_t record_len = core::endian::read_u32_be(plaintext.data() + offset);
+			offset += 4;
+			if (record_len < 4 + 32) {
+				throw core::errors::DeserialisationError{
+				  "Invalid record length."
+				};
+			}
 			if (offset + 32 > plaintext.size()) {
 				throw core::errors::DeserialisationError{
-				  "Truncated record: not enough bytes for type identifier."
+				  "Truncated record: missing type identifier."
 				};
 			}
 			domain::models::RecordType tag;
 			std::memcpy(tag.data(), plaintext.data() + offset, tag.size());
-			offset += tag.size();
+			offset += 32;
+			std::size_t data_start = offset;
+			bool known = true;
 			if (sodium_memcmp(tag.data(), pw_type.data(), tag.size()) == 0) {
+				domain::models::PasswordRecord rec;
 				if (offset + 8 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
-					  "Truncated PasswordRecord: not enough bytes for date field."
+					  "Truncated PasswordRecord: not enough bytes for date."
 					};
 				}
-				domain::models::PasswordRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				rec.login = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -146,12 +184,12 @@ namespace security::storage {
 				password_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), note_type.data(), tag.size()) == 0) {
+				domain::models::NoteRecord rec;
 				if (offset + 8 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
-					  "Truncated NoteRecord: not enough bytes for date field."
+					  "Truncated NoteRecord: not enough bytes for date."
 					};
 				}
-				domain::models::NoteRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				rec.title = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -159,12 +197,12 @@ namespace security::storage {
 				note_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), bank_type.data(), tag.size()) == 0) {
+				domain::models::BankCardRecord rec;
 				if (offset + 8 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
-					  "Truncated BankCardRecord: not enough bytes for date field."
+					  "Truncated BankCardRecord: not enough bytes for date."
 					};
 				}
-				domain::models::BankCardRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -175,12 +213,12 @@ namespace security::storage {
 				bankcard_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), disc_type.data(), tag.size()) == 0) {
+				domain::models::DiscountCardRecord rec;
 				if (offset + 8 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
-					  "Truncated DiscountCardRecord: not enough bytes for date field."
+					  "Truncated DiscountCardRecord: not enough bytes for date."
 					};
 				}
-				domain::models::DiscountCardRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -191,12 +229,12 @@ namespace security::storage {
 				discount_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), trans_type.data(), tag.size()) == 0) {
+				domain::models::TransportCardRecord rec;
 				if (offset + 8 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
-					  "Truncated TransportCardRecord: not enough bytes for date field."
+					  "Truncated TransportCardRecord: not enough bytes for date."
 					};
 				}
-				domain::models::TransportCardRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -208,12 +246,12 @@ namespace security::storage {
 				transport_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), mnem_type.data(), tag.size()) == 0) {
+				domain::models::MnemonicPhraseRecord rec;
 				if (offset + 16 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
 					  "Truncated MnemonicPhraseRecord: not enough bytes for fixed fields."
 					};
 				}
-				domain::models::MnemonicPhraseRecord rec;
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
 				std::uint64_t word_count = core::endian::read_u64_be(plaintext.data() + offset);
@@ -224,9 +262,7 @@ namespace security::storage {
 					  "Invalid word count in MnemonicPhraseRecord."
 					};
 				}
-				for (std::uint64_t i = 0;
-					i < word_count;
-					++i) {
+				for (std::uint64_t i = 0; i < word_count; ++i) {
 					rec.mnemonic.push_back(filesystem::storage::binary_serializer::read_string_field(plaintext, offset));
 				}
 				rec.passphrase = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
@@ -242,10 +278,24 @@ namespace security::storage {
 				mnemonicphrase_records_.push_back(std::move(rec));
 			}
 			else {
-				throw core::errors::DeserialisationError{
-				  "Unknown record type identifier - database may be corrupted or "
-				  "created by an incompatible version."
-				};
+				known = false;
+			}
+			if (known) {
+				std::size_t data_end = data_start + (record_len - 4 - 32);
+				if (offset != data_end) {
+					throw core::errors::DeserialisationError{
+					  "Size mismatch for known record type."
+					};
+				}
+			}
+			else {
+				std::size_t data_len = record_len - 4 - 32;
+				if (offset + data_len > plaintext.size()) {
+					throw core::errors::DeserialisationError{
+					  "Truncated unknown record."
+					};
+				}
+				offset += data_len;
 			}
 		}
 	}
