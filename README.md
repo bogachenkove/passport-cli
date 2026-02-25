@@ -24,7 +24,7 @@
 - **Cryptography**: [libsodium](https://doc.libsodium.org/) (Argon2id, XChaCha20‑Poly1305, BLAKE2b, randombytes)
 - **Unicode normalisation**: [ICU](https://icu.unicode.org/) (NFKD for BIP‑39 word matching)
 - **Build system**: CMake and Make
-- **Dependencies**: libsodium, ICU (development packages)
+- **Dependencies**: [libsodium](https://doc.libsodium.org/), [ICU](https://icu.unicode.org/) (development packages)
 
 ## Building
 
@@ -87,5 +87,4 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE.md)
 ## Author
 
 **Bogachenko Vyacheslav**  
-[bogachenkove@outlook.com](mailto:bogachenkove@outlook.com)  
-[https://github.com/bogachenkove/passport-cli](https://github.com/bogachenkove/passport-cli)
+Copyright (c) 2026 [Bogachenko Vyacheslav](mailto:bogachenkove@outlook.com). All rights reserved.
