@@ -1,12 +1,5 @@
-# CMakeLists.txt
-# Main build configuration for the passport-cli executable.
-# Cross-platform: works on Linux, MSYS2 (MinGW), and others.
-# Uses "quiet" detection for ICU library names.
-
-# Specify the minimum CMake version required for features used.
 cmake_minimum_required(VERSION 3.15)
 
-# Automatically select the C++ compiler: g++ (priority), otherwise clang++
 if(NOT CMAKE_CXX_COMPILER)
     find_program(GXX_COMPILER g++)
     find_program(CLANGXX_COMPILER clang++)
@@ -21,27 +14,60 @@ if(NOT CMAKE_CXX_COMPILER)
     endif()
 endif()
 
-# Define the project name and declare that only C++ is used.
 project(passport-cli LANGUAGES CXX)
 
-# ==== Compiler settings ====
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ==== Build type ====
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug or Release)" FORCE)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# Absolute path to the root of the source tree.
 set(SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../source")
 
-# ==== External libraries: libsodium ====
+# Link type: static or shared (default shared)
+set(LINK_TYPE "shared" CACHE STRING "Link type: static or shared")
+if(NOT LINK_TYPE STREQUAL "static" AND NOT LINK_TYPE STREQUAL "shared")
+    message(FATAL_ERROR "LINK_TYPE must be 'static' or 'shared'")
+endif()
+
+# Adjust library search suffixes based on link type
+if(LINK_TYPE STREQUAL "static")
+    if(WIN32)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib;.a")
+    else()
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    endif()
+else()
+    # Keep default suffixes (shared first)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.dll;.dylib;.a")
+endif()
+
 find_package(PkgConfig QUIET)
-if(PKG_CONFIG_FOUND)
-    pkg_check_modules(Sodium QUIET libsodium IMPORTED_TARGET)
+
+# libsodium
+if(DEFINED ENV{SODIUMROOT})
+    set(SODIUMROOT $ENV{SODIUMROOT})
+    find_library(Sodium_LIBRARY sodium PATHS ${SODIUMROOT}/lib NO_DEFAULT_PATH)
+    find_path(Sodium_INCLUDE_DIR sodium.h PATHS ${SODIUMROOT}/include NO_DEFAULT_PATH)
+    if(Sodium_LIBRARY AND Sodium_INCLUDE_DIR)
+        add_library(Sodium::Sodium UNKNOWN IMPORTED)
+        set_target_properties(Sodium::Sodium PROPERTIES
+            IMPORTED_LOCATION ${Sodium_LIBRARY}
+            INTERFACE_INCLUDE_DIRECTORIES ${Sodium_INCLUDE_DIR}
+        )
+        set(Sodium_FOUND TRUE)
+    else()
+        message(FATAL_ERROR "SODIUMROOT set but libsodium not found under it.")
+    endif()
+elseif(PKG_CONFIG_FOUND)
+    if(LINK_TYPE STREQUAL "static")
+        pkg_check_modules(Sodium STATIC QUIET libsodium IMPORTED_TARGET)
+    else()
+        pkg_check_modules(Sodium QUIET libsodium IMPORTED_TARGET)
+    endif()
     if(TARGET PkgConfig::Sodium)
         set(Sodium_FOUND TRUE)
     endif()
@@ -62,52 +88,71 @@ if(NOT Sodium_FOUND)
     endif()
 endif()
 
-# ==== External libraries: ICU (cross‑platform) ====
-# ICU (International Components for Unicode) handles text encoding and Unicode.
-# We try pkg-config first, then fall back to a manual search that accounts for
-# different library names on Linux (icui18n, icudata) and MSYS2/MinGW (icuin, icudt).
-
-# First attempt: pkg-config (most reliable on any system with .pc files)
-if(PKG_CONFIG_FOUND)
-    pkg_check_modules(ICU_UC QUIET icu-uc IMPORTED_TARGET)
-    pkg_check_modules(ICU_I18N QUIET icu-i18n IMPORTED_TARGET)
+# ICU
+if(DEFINED ENV{ICUROOT})
+    set(ICUROOT $ENV{ICUROOT})
+    find_path(ICU_INCLUDE_DIR unicode/unistr.h PATHS ${ICUROOT}/include NO_DEFAULT_PATH)
+    if(LINK_TYPE STREQUAL "static")
+        set(ICU_SUFFIX ".a")
+    else()
+        set(ICU_SUFFIX "")
+    endif()
+    find_library(ICU_UC_LIBRARY NAMES icuuc${ICU_SUFFIX} icuuc PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
+    find_library(ICU_I18N_LIBRARY NAMES icui18n${ICU_SUFFIX} icuin${ICU_SUFFIX} icui18n icuin PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
+    find_library(ICU_DATA_LIBRARY NAMES icudata${ICU_SUFFIX} icudt${ICU_SUFFIX} icudata icudt PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
+    if(ICU_UC_LIBRARY AND ICU_I18N_LIBRARY AND ICU_INCLUDE_DIR)
+        add_library(ICU::ICU UNKNOWN IMPORTED)
+        set_target_properties(ICU::ICU PROPERTIES
+            IMPORTED_LOCATION "${ICU_UC_LIBRARY}"
+            INTERFACE_LINK_LIBRARIES "${ICU_I18N_LIBRARY};${ICU_DATA_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${ICU_INCLUDE_DIR}"
+        )
+        set(ICU_FOUND TRUE)
+    else()
+        message(FATAL_ERROR "ICUROOT set but ICU not found under it.")
+    endif()
+elseif(PKG_CONFIG_FOUND)
+    if(LINK_TYPE STREQUAL "static")
+        pkg_check_modules(ICU_UC STATIC QUIET icu-uc IMPORTED_TARGET)
+        pkg_check_modules(ICU_I18N STATIC QUIET icu-i18n IMPORTED_TARGET)
+    else()
+        pkg_check_modules(ICU_UC QUIET icu-uc IMPORTED_TARGET)
+        pkg_check_modules(ICU_I18N QUIET icu-i18n IMPORTED_TARGET)
+    endif()
     if(TARGET PkgConfig::ICU_UC AND TARGET PkgConfig::ICU_I18N)
         set(ICU_FOUND TRUE)
         message(STATUS "Found ICU via pkg-config")
     endif()
 endif()
 
-# Manual fallback: search for libraries and header.
-# We define lists of possible names, ordered by likelihood.
-# The order matters: on Linux, "icui18n" is typical; on MSYS2, "icuin" is typical.
-# We also include "lib" prefixed variants for completeness.
 if(NOT ICU_FOUND)
-    # Try to guess the platform by checking for characteristic files.
-    # This is similar to the "quiet" detection in the Makefile.
-    if(EXISTS "/usr/lib/libicui18n.so" OR EXISTS "/usr/local/lib/libicui18n.so")
-        # Linux-style (icui18n, icudata) – keep default order
-        set(ICU_I18N_PREFERRED icui18n icuin libicui18n libicuin)
-        set(ICU_DATA_PREFERRED icudata icudt libicudata libicudt)
-    elseif(EXISTS "/usr/lib/libicuin.a" OR EXISTS "/usr/local/lib/libicuin.a")
-        # MSYS2/MinGW-style (icuin, icudt) – put these first
-        set(ICU_I18N_PREFERRED icuin icui18n libicuin libicui18n)
-        set(ICU_DATA_PREFERRED icudt icudata libicudt libicudata)
+    # Determine library naming based on file existence
+    if(EXISTS "/usr/lib/libicui18n.so" OR EXISTS "/usr/local/lib/libicui18n.so" OR
+       EXISTS "/usr/lib/libicui18n.a" OR EXISTS "/usr/local/lib/libicui18n.a")
+        set(ICU_I18N_NAMES icui18n icuin)
+        set(ICU_DATA_NAMES icudata icudt)
+    elseif(EXISTS "/usr/lib/libicuin.a" OR EXISTS "/usr/local/lib/libicuin.a" OR
+           EXISTS "/usr/lib/libicuin.so" OR EXISTS "/usr/local/lib/libicuin.so")
+        set(ICU_I18N_NAMES icuin icui18n)
+        set(ICU_DATA_NAMES icudt icudata)
     else()
-        # No clue – default to Linux order (most common)
-        set(ICU_I18N_PREFERRED icui18n icuin libicui18n libicuin)
-        set(ICU_DATA_PREFERRED icudata icudt libicudata libicudt)
+        set(ICU_I18N_NAMES icui18n icuin)
+        set(ICU_DATA_NAMES icudata icudt)
     endif()
 
-    # Also define names for the base ICU library (always icuuc)
-    set(ICU_UC_NAMES icuuc icuucd libicuuc)
+    set(ICU_UC_NAMES icuuc)
+    if(LINK_TYPE STREQUAL "static")
+        list(TRANSFORM ICU_UC_NAMES APPEND ".a")
+        list(TRANSFORM ICU_I18N_NAMES APPEND ".a")
+        list(TRANSFORM ICU_DATA_NAMES APPEND ".a")
+    endif()
 
     find_library(ICU_UC_LIBRARY NAMES ${ICU_UC_NAMES})
-    find_library(ICU_I18N_LIBRARY NAMES ${ICU_I18N_PREFERRED})
-    find_library(ICU_DATA_LIBRARY NAMES ${ICU_DATA_PREFERRED})
+    find_library(ICU_I18N_LIBRARY NAMES ${ICU_I18N_NAMES})
+    find_library(ICU_DATA_LIBRARY NAMES ${ICU_DATA_NAMES})
     find_path(ICU_INCLUDE_DIR unicode/unistr.h)
 
     if(ICU_UC_LIBRARY AND ICU_I18N_LIBRARY AND ICU_INCLUDE_DIR)
-        # Create an imported target that bundles all ICU dependencies.
         add_library(ICU::ICU UNKNOWN IMPORTED)
         set_target_properties(ICU::ICU PROPERTIES
             IMPORTED_LOCATION "${ICU_UC_LIBRARY}"
@@ -121,7 +166,7 @@ if(NOT ICU_FOUND)
     endif()
 endif()
 
-# ==== Extract metadata from metadata.hpp ====
+# Extract metadata
 set(VERSION_H "${SOURCE_DIR}/modules/core/metadata.hpp")
 file(READ "${VERSION_H}" VERSION_CONTENT)
 
@@ -143,11 +188,10 @@ get_version_macro("Author" AUTHOR)
 get_version_macro("Contact" CONTACT)
 get_version_macro("Homepage" HOMEPAGE)
 
-# ==== Gather source files ====
+# Gather sources with deterministic sorting
 file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp")
 list(SORT SOURCES)
 
-# ==== Define the executable target ====
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -166,7 +210,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${SOURCE_DIR}/modules
 )
 
-# ==== Link external libraries ====
 if(TARGET PkgConfig::Sodium)
     target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::Sodium)
 elseif(TARGET Sodium::Sodium)
@@ -179,7 +222,6 @@ elseif(TARGET ICU::ICU)
     target_link_libraries(${PROJECT_NAME} PRIVATE ICU::ICU)
 endif()
 
-# ==== Compiler and linker flags ====
 target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall -Wextra -pedantic
     -finput-charset=UTF-8 -fexec-charset=UTF-8
@@ -197,8 +239,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(${PROJECT_NAME} PRIVATE -O2 -DNDEBUG -g0)
-    target_link_options(${PROJECT_NAME} PRIVATE -s)
-    target_link_options(${PROJECT_NAME} PRIVATE -Wl,--build-id=none)
+    target_link_options(${PROJECT_NAME} PRIVATE -s -Wl,--build-id=none)
 else()
     message(WARNING "Unknown build type '${CMAKE_BUILD_TYPE}'. Defaulting to Debug flags.")
     target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
