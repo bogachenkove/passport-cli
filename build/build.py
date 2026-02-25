@@ -3,6 +3,7 @@
 Build script for Passport-CLI project.
 Allows selection of build type, compiler, and build system.
 Builds directly in the directory containing the build files.
+Supports manual specification of library paths via environment variables.
 """
 
 import os
@@ -11,6 +12,8 @@ import shutil
 import subprocess
 import sys
 import hashlib
+import socket
+import re
 from pathlib import Path
 
 # Optional color output
@@ -25,6 +28,9 @@ except ImportError:
     class Style:
         BRIGHT = RESET_ALL = ''
 
+# Global store for user‑defined environment variables (e.g., SODIUMROOT, ICUROOT)
+USER_ENV = {}
+
 def print_color(message, color=Fore.RESET, brightness=Style.RESET_ALL):
     if COLORAMA_AVAILABLE:
         print(f"{brightness}{color}{message}{Style.RESET_ALL}")
@@ -35,36 +41,27 @@ def error_exit(message):
     print_color(f"Error: {message}", Fore.RED, Style.BRIGHT)
     sys.exit(1)
 
-def require_command(cmd_name):
-    """
-    Check if a command is available. If not, offer to update package lists and
-    prompt user to enter an installation command, execute it, and re-check.
-    Loop until command is found or user aborts with Q.
-    """
-    while True:
-        if shutil.which(cmd_name) is not None:
-            return True
-        print_color(f"Required command '{cmd_name}' not found in PATH.", Fore.YELLOW)
+def check_network():
+    """Check if network is available by connecting to Google DNS."""
+    try:
+        socket.create_connection(("8.8.8.8", 53), timeout=5)
+        return True
+    except OSError:
+        return False
 
-        # Ask to update package lists
-        update_choice = get_choice("Update package lists before installing?", "YN", default="N")
-        if update_choice == 'Y':
-            print_color("Enter update command (e.g., 'sudo apt update'):", Fore.CYAN)
-            update_cmd = input("> ").strip()
-            if update_cmd:
-                result = subprocess.run(update_cmd, shell=True)
-                if result.returncode != 0:
-                    print_color(f"Update command failed with exit code {result.returncode}.", Fore.RED)
+def add_to_path(directory):
+    """Add a directory to the PATH environment variable for the current process."""
+    if directory and os.path.isdir(directory):
+        os.environ['PATH'] = directory + os.pathsep + os.environ.get('PATH', '')
+        return True
+    return False
 
-        # Ask for installation command
-        print_color(f"Enter installation command for '{cmd_name}' (or press Enter to abort):", Fore.CYAN)
-        install_cmd = input("> ").strip()
-        if not install_cmd:
-            error_exit(f"Aborted due to missing '{cmd_name}'.")
-        result = subprocess.run(install_cmd, shell=True)
-        if result.returncode != 0:
-            print_color(f"Installation command failed with exit code {result.returncode}.", Fore.RED)
-            # Loop again
+def sanitize_env_var_name(name):
+    """Keep only alphanumeric and underscore characters."""
+    # Remove leading/trailing whitespace and any non‑printable chars
+    name = name.strip()
+    # Keep only letters, digits, underscore
+    return re.sub(r'[^a-zA-Z0-9_]', '', name)
 
 def get_choice(prompt, options, default=None):
     """
@@ -94,6 +91,164 @@ def get_choice(prompt, options, default=None):
         if len(user_input) == 1 and user_input in options_upper:
             return user_input
         print_color(f"Invalid input. Expected one of: {options_upper} (or Q to quit)", Fore.YELLOW)
+
+def install_prompt(specific_cmd=None):
+    """
+    Universal prompt for entering installation commands.
+    If specific_cmd is provided, it will check for its presence after a successful command.
+    Returns True if a command succeeded (and specific_cmd became available if specified),
+    False if user pressed Enter to abort this round.
+    """
+    if specific_cmd:
+        print_color(f"Enter installation command for '{specific_cmd}' (or press Enter to abort, or type quit/exit):", Fore.CYAN)
+    else:
+        print_color("Enter installation commands (one per line).", Fore.CYAN)
+        print_color("After a successful command, the build will be retried automatically.", Fore.CYAN)
+        print_color("Press Enter on an empty line to abort this installation attempt.", Fore.CYAN)
+        print_color("Type 'quit' or 'exit' to abort the script.", Fore.CYAN)
+
+    while True:
+        # Check network and warn if offline
+        if not check_network():
+            print_color("Warning: No network connectivity. Installation commands may fail.", Fore.YELLOW)
+
+        cmd = input("> ").strip()
+        if not cmd:
+            return False
+        if cmd.lower() in ('quit', 'exit'):
+            error_exit("Aborted by user.")
+        result = subprocess.run(cmd, shell=True)
+        if result.returncode != 0:
+            print_color(f"Command failed with exit code {result.returncode}. You may try another command.", Fore.RED)
+            continue
+        # Command succeeded
+        if specific_cmd:
+            # Verify that the required command is now available
+            if shutil.which(specific_cmd) is not None:
+                print_color(f"Command '{specific_cmd}' is now available.", Fore.GREEN)
+                return True
+            else:
+                print_color(f"Command succeeded but '{specific_cmd}' still not found in PATH. You may need to restart your shell or try another command.", Fore.YELLOW)
+                # Continue prompting
+        else:
+            # No specific command to verify, just assume success
+            return True
+
+def require_command(cmd_name):
+    """
+    Ensure a command is available. If not, offer interactive options:
+    - Update package lists
+    - Install via command
+    - Manually specify path to executable
+    - Quit
+    Loops until command is found or user aborts.
+    """
+    while True:
+        if shutil.which(cmd_name) is not None:
+            return True
+
+        print_color(f"Required command '{cmd_name}' not found in PATH.", Fore.YELLOW)
+
+        action = get_choice(
+            f"Choose action for '{cmd_name}'",
+            "UIMP",  # U=Update, I=Install, M=Manual path, Q handled globally
+            default=None
+        )
+
+        if action == 'U':  # Update package lists
+            if not check_network():
+                print_color("Warning: No network connectivity. Update may fail.", Fore.YELLOW)
+            print_color("Enter update command (e.g., 'sudo apt update'):", Fore.CYAN)
+            update_cmd = input("> ").strip()
+            if update_cmd.lower() in ('quit', 'exit'):
+                error_exit("Aborted by user.")
+            if update_cmd:
+                subprocess.run(update_cmd, shell=True)
+            continue
+
+        elif action == 'I':  # Install via command
+            if not check_network():
+                print_color("Warning: No network connectivity. Installation may fail.", Fore.YELLOW)
+            if install_prompt(specific_cmd=cmd_name):
+                continue
+            else:
+                continue
+
+        elif action == 'M':  # Manually specify path
+            print_color(f"Enter full path to the '{cmd_name}' executable:", Fore.CYAN)
+            path_str = input("> ").strip()
+            if not path_str:
+                print_color("No path entered.", Fore.YELLOW)
+                continue
+            exe_path = Path(path_str).expanduser().resolve()
+            if not exe_path.exists():
+                print_color(f"File not found: {exe_path}", Fore.RED)
+                continue
+            if not os.access(exe_path, os.X_OK):
+                print_color(f"File is not executable: {exe_path}", Fore.RED)
+                continue
+            parent_dir = str(exe_path.parent)
+            if add_to_path(parent_dir):
+                print_color(f"Added {parent_dir} to PATH. Verifying...", Fore.GREEN)
+            else:
+                print_color(f"Failed to add {parent_dir} to PATH.", Fore.RED)
+            continue
+
+def handle_build_failure():
+    """
+    Interactive handler for build failures (e.g., missing libraries).
+    Offers options to set environment variables (SODIUMROOT, ICUROOT), run installation commands,
+    update package lists, or quit.
+    Returns True if the user performed an action that might resolve the issue,
+    False if the user aborts.
+    """
+    print_color("Build failed. You can try to resolve missing dependencies.", Fore.YELLOW)
+    while True:
+        action = get_choice(
+            "Choose action",
+            "SEUQ",  # S=Set env, E=Enter install command, U=Update, Q=Quit
+            default=None
+        )
+        if action == 'S':  # Set environment variable
+            print_color("Enter environment variable name (e.g., SODIUMROOT, ICUROOT):", Fore.CYAN)
+            raw_name = input("> ").strip()
+            if not raw_name:
+                print_color("No variable name entered.", Fore.YELLOW)
+                continue
+            var_name = sanitize_env_var_name(raw_name)
+            if not var_name:
+                print_color(f"Invalid variable name after sanitisation: '{raw_name}'", Fore.YELLOW)
+                continue
+            print_color(f"Enter value for {var_name} (path to library root):", Fore.CYAN)
+            var_value = input("> ").strip()
+            if not var_value:
+                print_color("No value entered.", Fore.YELLOW)
+                continue
+            # Store for subsequent build attempts
+            USER_ENV[var_name] = var_value
+            print_color(f"Environment variable {var_name}={var_value} will be used in next build attempt.", Fore.GREEN)
+            return True
+
+        elif action == 'E':  # Enter installation command
+            if install_prompt(specific_cmd=None):
+                return True
+            else:
+                # User pressed Enter to abort this round – go back to menu
+                continue
+
+        elif action == 'U':  # Update package lists
+            if not check_network():
+                print_color("Warning: No network connectivity. Update may fail.", Fore.YELLOW)
+            print_color("Enter update command (e.g., 'sudo apt update'):", Fore.CYAN)
+            update_cmd = input("> ").strip()
+            if update_cmd.lower() in ('quit', 'exit'):
+                error_exit("Aborted by user.")
+            if update_cmd:
+                subprocess.run(update_cmd, shell=True)
+            continue
+
+        elif action == 'Q':  # Quit
+            return False
 
 def get_build_config():
     """Loop to select build configuration with confirmation."""
@@ -177,8 +332,21 @@ def build_with_cmake(build_dir, build_type, compiler):
     else:
         require_command('clang++')
 
+    # Remove CMakeFiles to ensure clean state
+    cmake_files = build_dir / "CMakeFiles"
+    if cmake_files.exists():
+        print_color(f"Removing existing {cmake_files} for clean build.", Fore.YELLOW)
+        shutil.rmtree(cmake_files)
+    cache_file = build_dir / "CMakeCache.txt"
+    if cache_file.exists():
+        cache_file.unlink()
+
     print_color("\n--- Running CMake ---", Fore.CYAN, Style.BRIGHT)
     os.chdir(build_dir)
+
+    # Build environment with user-defined variables
+    env = os.environ.copy()
+    env.update(USER_ENV)
 
     cmake_cmd = ['cmake', '.']
     cmake_cmd.append(f'-DCMAKE_BUILD_TYPE={"Debug" if build_type=="D" else "Release"}')
@@ -191,14 +359,14 @@ def build_with_cmake(build_dir, build_type, compiler):
         ])
 
     print_color(f"Executing: {' '.join(cmake_cmd)}", Fore.YELLOW)
-    result = subprocess.run(cmake_cmd)
+    result = subprocess.run(cmake_cmd, env=env)
     if result.returncode != 0:
         print_color("CMake generation failed.", Fore.RED)
         return False
 
     print_color("\n--- Compiling (cmake --build) ---", Fore.CYAN, Style.BRIGHT)
     build_cmd = ['cmake', '--build', '.', '--parallel']
-    result = subprocess.run(build_cmd)
+    result = subprocess.run(build_cmd, env=env)
     if result.returncode != 0:
         print_color("Compilation failed.", Fore.RED)
         return False
@@ -214,16 +382,29 @@ def build_with_make(build_dir, build_type, compiler):
     else:
         require_command('clang++')
 
+    # Remove MakeFiles to ensure clean state
+    make_files = build_dir / "MakeFiles"
+    if make_files.exists():
+        print_color(f"Removing existing {make_files} for clean build.", Fore.YELLOW)
+        shutil.rmtree(make_files)
+
     print_color("\n--- Running Make ---", Fore.CYAN, Style.BRIGHT)
     os.chdir(build_dir)
 
+    # Build environment with user-defined variables
     env = os.environ.copy()
+    env.update(USER_ENV)
     if compiler == 'G':
         env['CXX'] = 'g++'
     else:
-        # For clang++, add -stdlib=libstdc++ to the compiler command itself
         env['CXX'] = 'clang++ -stdlib=libstdc++'
     env['BUILD'] = 'debug' if build_type == 'D' else 'release'
+
+    # Debug: show environment variables that might affect build
+    if 'SODIUMROOT' in env:
+        print_color(f"  SODIUMROOT={env['SODIUMROOT']}", Fore.CYAN)
+    if 'ICUROOT' in env:
+        print_color(f"  ICUROOT={env['ICUROOT']}", Fore.CYAN)
 
     make_cmd = ['make', '--jobs']
     print_color(f"Executing: {' '.join(make_cmd)} with BUILD={env['BUILD']}, CXX={env.get('CXX','')}", Fore.YELLOW)
@@ -235,33 +416,12 @@ def build_with_make(build_dir, build_type, compiler):
     print_color("Make build completed successfully.", Fore.GREEN)
     return True
 
-def prompt_install_commands():
-    """
-    Let the user enter shell commands to install dependencies.
-    Returns after the first successful command (returncode 0) or when user enters an empty line.
-    Failed commands do not exit the prompt.
-    """
-    print_color("Enter installation commands (one per line).", Fore.CYAN)
-    print_color("After a successful command, the build will be retried automatically.", Fore.CYAN)
-    print_color("Press Enter on an empty line to abort this installation attempt.", Fore.CYAN)
-    while True:
-        cmd = input("> ").strip()
-        if not cmd:
-            # User aborts this installation round
-            print_color("No command entered, continuing with build attempt.", Fore.YELLOW)
-            return
-        result = subprocess.run(cmd, shell=True)
-        if result.returncode == 0:
-            print_color("Command succeeded. Retrying build...", Fore.GREEN)
-            return  # Success, exit prompt and retry build
-        else:
-            print_color(f"Command failed with exit code {result.returncode}. You may try another command.", Fore.RED)
-
 def run_build_with_retry(builder, build_dir, build_type, compiler):
-    """Attempt build up to 3 times, prompting for dependency installation on failure."""
-    max_attempts = 3
-    for attempt in range(1, max_attempts + 1):
-        print_color(f"\n--- Build attempt {attempt}/{max_attempts} ---", Fore.CYAN, Style.BRIGHT)
+    """Attempt build indefinitely, prompting for dependency installation on failure."""
+    attempt = 0
+    while True:
+        attempt += 1
+        print_color(f"\n--- Build attempt {attempt} ---", Fore.CYAN, Style.BRIGHT)
         success = False
         if builder == 'C':
             success = build_with_cmake(build_dir, build_type, compiler)
@@ -271,12 +431,10 @@ def run_build_with_retry(builder, build_dir, build_type, compiler):
         if success:
             return True
 
-        if attempt < max_attempts:
-            print_color("Build failed. You may install missing dependencies.", Fore.YELLOW)
-            prompt_install_commands()
-            print_color("Retrying build...", Fore.CYAN)
-        else:
-            error_exit("Build failed after 3 attempts. Aborting.")
+        # Interactive failure handling
+        if not handle_build_failure():
+            error_exit("Build aborted by user.")
+        print_color("Retrying build...", Fore.CYAN)
 
 def compute_hashes(file_path):
     """Compute BLAKE2b and SHA256 hashes of a file."""
@@ -457,10 +615,6 @@ def verify_signature(exe_path):
     return True
 
 def main():
-    # Check if running as root
-    if os.geteuid() == 0:
-        error_exit("This script must not be run as root. Please run as a normal user.")
-
     # System information
     system = platform.system()
     release = platform.release()
