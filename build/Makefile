@@ -1,5 +1,7 @@
 # Makefile
 # Main build configuration for the passport-cli executable
+# Cross-platform: works on Linux, MSYS2 (MinGW), and others.
+# Uses "quiet" detection without hardcoding OS names.
 
 # ==== Build type selection ====
 # User can set BUILD=debug or BUILD=release. Default is release.
@@ -38,11 +40,11 @@ CXXFLAGS = -std=c++20
 LDFLAGS =
 LIBS =
 
+# Check for pkg-config availability.
+PKG_CONFIG := $(shell command -v pkg-config 2>/dev/null)
+
 # ==== Dependency: libsodium ====
 # libsodium provides cryptographic functions. It is mandatory.
-
-# Check if pkg-config is available.
-PKG_CONFIG := $(shell command -v pkg-config 2>/dev/null)
 LIBSODIUM_FOUND := 0
 
 # If SODIUMROOT is set, use it as a prefix (manual installation).
@@ -55,7 +57,7 @@ ifdef SODIUMROOT
     LIBS     += -lsodium
     LIBSODIUM_FOUND := 1
 else
-    # Otherwise try to get flags from pkg-config.
+    # Try pkg-config.
     ifdef PKG_CONFIG
         SODIUM_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsodium 2>/dev/null)
         SODIUM_LIBS   := $(shell $(PKG_CONFIG) --libs   libsodium 2>/dev/null)
@@ -86,10 +88,34 @@ ifeq ($(LIBSODIUM_FOUND),0)
     $(error Libsodium not found. Install libsodium development package.)
 endif
 
-# ==== Dependency: ICU ====
+# ==== Dependency: ICU (cross-platform) ====
 # ICU handles Unicode and internationalization.
-
 ICU_FOUND := 0
+
+# Determine ICU library names if not set by user.
+# User can override by setting ICU_LIBS_NAMES environment variable.
+ifndef ICU_LIBS_NAMES
+    # Try pkg-config first.
+    ifdef PKG_CONFIG
+        ICU_LIBS := $(shell $(PKG_CONFIG) --libs icu-uc icu-i18n 2>/dev/null)
+        ifneq ($(ICU_LIBS),)
+            ICU_LIBS_NAMES := $(ICU_LIBS)
+        endif
+    endif
+    # If pkg-config failed, guess based on file existence.
+    ifndef ICU_LIBS_NAMES
+        # Check for Linux-style library (libicui18n.so)
+        ifneq (,$(wildcard /usr/lib/libicui18n.so))
+            ICU_LIBS_NAMES := -licuuc -licui18n -licudata
+        else ifneq (,$(wildcard /usr/lib/libicuin.a))
+            # MSYS2 / MinGW style (libicuin.a)
+            ICU_LIBS_NAMES := -licuuc -licuin -licudt
+        else
+            # Default to Linux style (most common)
+            ICU_LIBS_NAMES := -licuuc -licui18n -licudata
+        endif
+    endif
+endif
 
 # If ICUROOT is set, use it.
 ifdef ICUROOT
@@ -98,10 +124,10 @@ ifdef ICUROOT
     endif
     CXXFLAGS += -I$(ICUROOT)/include
     LDFLAGS  += -L$(ICUROOT)/lib
-    LIBS     += -licuuc -licui18n -licudata
+    LIBS     += $(ICU_LIBS_NAMES)
     ICU_FOUND := 1
 else
-    # Try pkg-config.
+    # Try pkg-config (if not already used to set ICU_LIBS_NAMES).
     ifdef PKG_CONFIG
         ICU_CFLAGS := $(shell $(PKG_CONFIG) --cflags icu-uc icu-i18n 2>/dev/null)
         ICU_LIBS   := $(shell $(PKG_CONFIG) --libs   icu-uc icu-i18n 2>/dev/null)
@@ -113,7 +139,7 @@ else
     endif
 endif
 
-# Manual system path search.
+# Manual system path search (fallback).
 ifeq ($(ICU_FOUND),0)
     ifneq (,$(wildcard /usr/include/unicode/unistr.h))
         CXXFLAGS += -I/usr/include
@@ -123,13 +149,13 @@ ifeq ($(ICU_FOUND),0)
         ICU_FOUND := 1
     endif
     ifeq ($(ICU_FOUND),1)
-        LIBS += -licuuc -licui18n -licudata
+        LIBS += $(ICU_LIBS_NAMES)
     endif
 endif
 
 # Abort if ICU is still missing.
 ifeq ($(ICU_FOUND),0)
-    $(error ICU not found. Install ICU development package.)
+    $(error ICU not found. Install ICU development package or set ICUROOT and ICU_LIBS_NAMES)
 endif
 
 # ==== Compiler detection and base flags ====
