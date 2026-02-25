@@ -1,6 +1,4 @@
 BUILD ?= release
-LINK_TYPE ?= shared
-
 ifeq ($(BUILD),debug)
     BUILD_MODE := Debug
 else ifeq ($(BUILD),release)
@@ -9,19 +7,10 @@ else
     $(error BUILD must be either 'debug' or 'release' (default: release))
 endif
 
-ifeq ($(LINK_TYPE),static)
-    STATIC_LINK := 1
-else ifeq ($(LINK_TYPE),shared)
-    STATIC_LINK := 0
-else
-    $(error LINK_TYPE must be either 'static' or 'shared' (default: shared))
-endif
-
 TARGET = passport-cli
 SRC_DIR = ../source
 OBJ_DIR = ./MakeFiles/$(TARGET).dir
 
-# Deterministic source sorting
 SOURCES := $(shell LC_ALL=C find $(SRC_DIR) -name "*.cpp" | LC_ALL=C sort)
 OBJECTS := $(addprefix $(OBJ_DIR)/,$(patsubst $(SRC_DIR)/%,%,$(SOURCES:.cpp=.cpp.o)))
 
@@ -37,9 +26,7 @@ LDFLAGS =
 LIBS =
 
 PKG_CONFIG := $(shell command -v pkg-config 2>/dev/null)
-PKG_CONFIG_STATIC := $(if $(STATIC_LINK),--static,)
 
-# libsodium
 LIBSODIUM_FOUND := 0
 ifdef SODIUMROOT
     ifeq (,$(wildcard $(SODIUMROOT)/include/sodium.h))
@@ -47,16 +34,12 @@ ifdef SODIUMROOT
     endif
     CXXFLAGS += -I$(SODIUMROOT)/include
     LDFLAGS  += -L$(SODIUMROOT)/lib
-    ifeq ($(STATIC_LINK),1)
-        LIBS += $(SODIUMROOT)/lib/libsodium.a
-    else
-        LIBS += -lsodium
-    endif
+    LIBS     += -lsodium
     LIBSODIUM_FOUND := 1
 else
     ifdef PKG_CONFIG
-        SODIUM_CFLAGS := $(shell $(PKG_CONFIG) $(PKG_CONFIG_STATIC) --cflags libsodium 2>/dev/null)
-        SODIUM_LIBS   := $(shell $(PKG_CONFIG) $(PKG_CONFIG_STATIC) --libs   libsodium 2>/dev/null)
+        SODIUM_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsodium 2>/dev/null)
+        SODIUM_LIBS   := $(shell $(PKG_CONFIG) --libs   libsodium 2>/dev/null)
         ifneq ($(SODIUM_CFLAGS),)
             CXXFLAGS += $(SODIUM_CFLAGS)
             LIBS     += $(SODIUM_LIBS)
@@ -73,32 +56,22 @@ ifeq ($(LIBSODIUM_FOUND),0)
         LIBSODIUM_FOUND := 1
     endif
     ifeq ($(LIBSODIUM_FOUND),1)
-        ifeq ($(STATIC_LINK),1)
-            LIBS += $(shell find /usr/lib* /usr/local/lib* -name libsodium.a 2>/dev/null | head -n1)
-            ifeq ($(LIBS),)
-                $(error Static libsodium not found in standard paths)
-            endif
-        else
-            LIBS += -lsodium
-        endif
+        LIBS += -lsodium
     endif
 endif
 ifeq ($(LIBSODIUM_FOUND),0)
     $(error Libsodium not found. Install libsodium development package.)
 endif
 
-# ICU
 ICU_FOUND := 0
-ICU_LIBS_NAMES ?= 
 ifndef ICU_LIBS_NAMES
     ifdef PKG_CONFIG
-        ICU_LIBS := $(shell $(PKG_CONFIG) $(PKG_CONFIG_STATIC) --libs icu-uc icu-i18n 2>/dev/null)
+        ICU_LIBS := $(shell $(PKG_CONFIG) --libs icu-uc icu-i18n 2>/dev/null)
         ifneq ($(ICU_LIBS),)
             ICU_LIBS_NAMES := $(ICU_LIBS)
         endif
     endif
     ifndef ICU_LIBS_NAMES
-        # Guess based on file existence
         ifneq (,$(wildcard /usr/lib/libicui18n.so /usr/local/lib/libicui18n.so /usr/lib/libicui18n.a /usr/local/lib/libicui18n.a))
             ICU_LIBS_NAMES := -licuuc -licui18n -licudata
         else ifneq (,$(wildcard /usr/lib/libicuin.a /usr/local/lib/libicuin.a /usr/lib/libicuin.so /usr/local/lib/libicuin.so))
@@ -108,23 +81,18 @@ ifndef ICU_LIBS_NAMES
         endif
     endif
 endif
-
 ifdef ICUROOT
     ifeq (,$(wildcard $(ICUROOT)/include/unicode/unistr.h))
         $(error ICUROOT is set but unicode/unistr.h not found in $(ICUROOT)/include)
     endif
     CXXFLAGS += -I$(ICUROOT)/include
     LDFLAGS  += -L$(ICUROOT)/lib
-    ifeq ($(STATIC_LINK),1)
-        # Replace -l names with full paths to .a
-        ICU_LIBS_NAMES := $(patsubst -l%,$(ICUROOT)/lib/lib%.a,$(filter -l%,$(ICU_LIBS_NAMES)))
-    endif
-    LIBS += $(ICU_LIBS_NAMES)
+    LIBS     += $(ICU_LIBS_NAMES)
     ICU_FOUND := 1
 else
     ifdef PKG_CONFIG
-        ICU_CFLAGS := $(shell $(PKG_CONFIG) $(PKG_CONFIG_STATIC) --cflags icu-uc icu-i18n 2>/dev/null)
-        ICU_LIBS   := $(shell $(PKG_CONFIG) $(PKG_CONFIG_STATIC) --libs   icu-uc icu-i18n 2>/dev/null)
+        ICU_CFLAGS := $(shell $(PKG_CONFIG) --cflags icu-uc icu-i18n 2>/dev/null)
+        ICU_LIBS   := $(shell $(PKG_CONFIG) --libs   icu-uc icu-i18n 2>/dev/null)
         ifneq ($(ICU_CFLAGS),)
             CXXFLAGS += $(ICU_CFLAGS)
             LIBS     += $(ICU_LIBS)
@@ -141,26 +109,7 @@ ifeq ($(ICU_FOUND),0)
         ICU_FOUND := 1
     endif
     ifeq ($(ICU_FOUND),1)
-        ifeq ($(STATIC_LINK),1)
-            # Try to locate static libraries
-            ICU_UC := $(shell find /usr/lib* /usr/local/lib* -name libicuuc.a 2>/dev/null | head -n1)
-            ICU_I18N := $(shell find /usr/lib* /usr/local/lib* -name libicui18n.a 2>/dev/null || find /usr/lib* /usr/local/lib* -name libicuin.a 2>/dev/null | head -n1)
-            ICU_DATA := $(shell find /usr/lib* /usr/local/lib* -name libicudata.a 2>/dev/null || find /usr/lib* /usr/local/lib* -name libicudt.a 2>/dev/null | head -n1)
-            ifneq ($(ICU_UC),)
-                LIBS += $(ICU_UC)
-            endif
-            ifneq ($(ICU_I18N),)
-                LIBS += $(ICU_I18N)
-            endif
-            ifneq ($(ICU_DATA),)
-                LIBS += $(ICU_DATA)
-            endif
-            ifeq ($(ICU_UC)$(ICU_I18N)$(ICU_DATA),)
-                $(error Static ICU libraries not found in standard paths)
-            endif
-        else
-            LIBS += $(ICU_LIBS_NAMES)
-        endif
+        LIBS += $(ICU_LIBS_NAMES)
     endif
 endif
 ifeq ($(ICU_FOUND),0)
@@ -180,8 +129,7 @@ ifeq ($(BUILD),debug)
         -gno-record-gcc-switches
 else ifeq ($(BUILD),release)
     CXXFLAGS += -O2 -DNDEBUG -g0
-    LDFLAGS  += -s
-    LDFLAGS += -Wl,--build-id=none
+    LDFLAGS  += -s -Wl,--build-id=none
 endif
 
 CXXFLAGS += -I$(SRC_DIR) -I$(SRC_DIR)/modules
@@ -225,7 +173,7 @@ $(shell mkdir -p $(OBJ_DIR))
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 $(OBJ_DIR)/%.cpp.o: %.cpp
 	@mkdir -p $(dir $@)

@@ -27,47 +27,9 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../source")
 
-# Link type: static or shared (default shared)
-set(LINK_TYPE "shared" CACHE STRING "Link type: static or shared")
-if(NOT LINK_TYPE STREQUAL "static" AND NOT LINK_TYPE STREQUAL "shared")
-    message(FATAL_ERROR "LINK_TYPE must be 'static' or 'shared'")
-endif()
-
-# Adjust library search suffixes based on link type
-if(LINK_TYPE STREQUAL "static")
-    if(WIN32)
-        set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib;.a")
-    else()
-        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-    endif()
-else()
-    # Keep default suffixes (shared first)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.dll;.dylib;.a")
-endif()
-
 find_package(PkgConfig QUIET)
-
-# libsodium
-if(DEFINED ENV{SODIUMROOT})
-    set(SODIUMROOT $ENV{SODIUMROOT})
-    find_library(Sodium_LIBRARY sodium PATHS ${SODIUMROOT}/lib NO_DEFAULT_PATH)
-    find_path(Sodium_INCLUDE_DIR sodium.h PATHS ${SODIUMROOT}/include NO_DEFAULT_PATH)
-    if(Sodium_LIBRARY AND Sodium_INCLUDE_DIR)
-        add_library(Sodium::Sodium UNKNOWN IMPORTED)
-        set_target_properties(Sodium::Sodium PROPERTIES
-            IMPORTED_LOCATION ${Sodium_LIBRARY}
-            INTERFACE_INCLUDE_DIRECTORIES ${Sodium_INCLUDE_DIR}
-        )
-        set(Sodium_FOUND TRUE)
-    else()
-        message(FATAL_ERROR "SODIUMROOT set but libsodium not found under it.")
-    endif()
-elseif(PKG_CONFIG_FOUND)
-    if(LINK_TYPE STREQUAL "static")
-        pkg_check_modules(Sodium STATIC QUIET libsodium IMPORTED_TARGET)
-    else()
-        pkg_check_modules(Sodium QUIET libsodium IMPORTED_TARGET)
-    endif()
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(Sodium QUIET libsodium IMPORTED_TARGET)
     if(TARGET PkgConfig::Sodium)
         set(Sodium_FOUND TRUE)
     endif()
@@ -88,37 +50,9 @@ if(NOT Sodium_FOUND)
     endif()
 endif()
 
-# ICU
-if(DEFINED ENV{ICUROOT})
-    set(ICUROOT $ENV{ICUROOT})
-    find_path(ICU_INCLUDE_DIR unicode/unistr.h PATHS ${ICUROOT}/include NO_DEFAULT_PATH)
-    if(LINK_TYPE STREQUAL "static")
-        set(ICU_SUFFIX ".a")
-    else()
-        set(ICU_SUFFIX "")
-    endif()
-    find_library(ICU_UC_LIBRARY NAMES icuuc${ICU_SUFFIX} icuuc PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
-    find_library(ICU_I18N_LIBRARY NAMES icui18n${ICU_SUFFIX} icuin${ICU_SUFFIX} icui18n icuin PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
-    find_library(ICU_DATA_LIBRARY NAMES icudata${ICU_SUFFIX} icudt${ICU_SUFFIX} icudata icudt PATHS ${ICUROOT}/lib NO_DEFAULT_PATH)
-    if(ICU_UC_LIBRARY AND ICU_I18N_LIBRARY AND ICU_INCLUDE_DIR)
-        add_library(ICU::ICU UNKNOWN IMPORTED)
-        set_target_properties(ICU::ICU PROPERTIES
-            IMPORTED_LOCATION "${ICU_UC_LIBRARY}"
-            INTERFACE_LINK_LIBRARIES "${ICU_I18N_LIBRARY};${ICU_DATA_LIBRARY}"
-            INTERFACE_INCLUDE_DIRECTORIES "${ICU_INCLUDE_DIR}"
-        )
-        set(ICU_FOUND TRUE)
-    else()
-        message(FATAL_ERROR "ICUROOT set but ICU not found under it.")
-    endif()
-elseif(PKG_CONFIG_FOUND)
-    if(LINK_TYPE STREQUAL "static")
-        pkg_check_modules(ICU_UC STATIC QUIET icu-uc IMPORTED_TARGET)
-        pkg_check_modules(ICU_I18N STATIC QUIET icu-i18n IMPORTED_TARGET)
-    else()
-        pkg_check_modules(ICU_UC QUIET icu-uc IMPORTED_TARGET)
-        pkg_check_modules(ICU_I18N QUIET icu-i18n IMPORTED_TARGET)
-    endif()
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(ICU_UC QUIET icu-uc IMPORTED_TARGET)
+    pkg_check_modules(ICU_I18N QUIET icu-i18n IMPORTED_TARGET)
     if(TARGET PkgConfig::ICU_UC AND TARGET PkgConfig::ICU_I18N)
         set(ICU_FOUND TRUE)
         message(STATUS "Found ICU via pkg-config")
@@ -126,7 +60,6 @@ elseif(PKG_CONFIG_FOUND)
 endif()
 
 if(NOT ICU_FOUND)
-    # Determine library naming based on file existence
     if(EXISTS "/usr/lib/libicui18n.so" OR EXISTS "/usr/local/lib/libicui18n.so" OR
        EXISTS "/usr/lib/libicui18n.a" OR EXISTS "/usr/local/lib/libicui18n.a")
         set(ICU_I18N_NAMES icui18n icuin)
@@ -140,12 +73,7 @@ if(NOT ICU_FOUND)
         set(ICU_DATA_NAMES icudata icudt)
     endif()
 
-    set(ICU_UC_NAMES icuuc)
-    if(LINK_TYPE STREQUAL "static")
-        list(TRANSFORM ICU_UC_NAMES APPEND ".a")
-        list(TRANSFORM ICU_I18N_NAMES APPEND ".a")
-        list(TRANSFORM ICU_DATA_NAMES APPEND ".a")
-    endif()
+    set(ICU_UC_NAMES icuuc icuucd)
 
     find_library(ICU_UC_LIBRARY NAMES ${ICU_UC_NAMES})
     find_library(ICU_I18N_LIBRARY NAMES ${ICU_I18N_NAMES})
@@ -166,7 +94,6 @@ if(NOT ICU_FOUND)
     endif()
 endif()
 
-# Extract metadata
 set(VERSION_H "${SOURCE_DIR}/modules/core/metadata.hpp")
 file(READ "${VERSION_H}" VERSION_CONTENT)
 
@@ -188,7 +115,6 @@ get_version_macro("Author" AUTHOR)
 get_version_macro("Contact" CONTACT)
 get_version_macro("Homepage" HOMEPAGE)
 
-# Gather sources with deterministic sorting
 file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp")
 list(SORT SOURCES)
 
