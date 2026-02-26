@@ -10,5 +10,6 @@ namespace domain::models {
 	inline constexpr const char* kContextDiscountCard = { "PASSPORT::DISCOUNTCARD//DATABASE" };
 	inline constexpr const char* kContextTransportCard = { "PASSPORT::TRANSPORTCARD//DATABASE" };
 	inline constexpr const char* kContextMnemonic = { "PASSPORT::MNEMONIC//DATABASE" };
-	inline constexpr const char* kContextWiFi = {"PASSPORT::WIFI//DATABASE"};
+	inline constexpr const char* kContextWiFi = { "PASSPORT::WIFI//DATABASE" };
+	inline constexpr const char* kContextKey = { "PASSPORT::KEY//DATABASE" };
 }

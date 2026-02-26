@@ -8,6 +8,7 @@
 #include "../../models/transport_card_record.hpp"
 #include "../../models/mnemonic_record.hpp"
 #include "../../models/wifi_record.hpp"
+#include "../../models/key_record.hpp"
 #include <memory>
 
 namespace app::commands {
@@ -27,5 +28,6 @@ namespace app::commands {
 		domain::models::TransportCardRecord prompt_transportcard_record();
 		domain::models::MnemonicRecord prompt_mnemonic_record();
 		domain::models::WiFiRecord prompt_wifi_record();
+		domain::models::KeyRecord prompt_key_record();
 	};
 }

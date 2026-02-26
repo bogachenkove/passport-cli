@@ -63,6 +63,9 @@ namespace security::crypto {
 	domain::models::RecordType TypeSystem::wifi_type() const {
 		return derive_type(domain::models::kContextWiFi);
 	}
+	domain::models::RecordType TypeSystem::key_type() const {
+		return derive_type(domain::models::kContextKey);
+	}
 	const std::vector<std::uint8_t>& TypeSystem::master_seed() const noexcept {
 		return master_seed_;
 	}

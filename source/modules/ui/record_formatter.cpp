@@ -394,4 +394,51 @@ namespace ui {
 		}
 		term->show_message("\n  Total Wi-Fi network records: " + std::to_string(records.size()));
 	}
+	void ui::display_key_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+		const auto& records = db.key_records();
+		if (records.empty()) {
+			term->show_message("\n  No key records to display.");
+			return;
+		}
+		constexpr std::size_t kDateColWidth = 16;
+		std::size_t w_chain = 5, w_symbol = 5, w_pub = 10, w_priv = 10, w_note = 5;
+		for (const auto& r : records) {
+			if (r.chain.size() > w_chain) w_chain = r.chain.size();
+			if (r.symbol.size() > w_symbol) w_symbol = r.symbol.size();
+			if (r.publickey.size() > w_pub) w_pub = r.publickey.size();
+			if (r.privatekey.size() > w_priv) w_priv = r.privatekey.size();
+			if (r.note.size() > w_note) w_note = r.note.size();
+		}
+		std::ostringstream header;
+		header << "\n  --- Key Records (* = required) ---\n\n";
+		header << "  "
+			<< std::left
+			<< std::setw(5) << "#"
+			<< std::setw(kDateColWidth + 3) << "Date"
+			<< std::setw(w_chain + 3) << "Chain*"
+			<< std::setw(w_symbol + 3) << "Symbol*"
+			<< std::setw(w_pub + 3) << "Public Key*"
+			<< std::setw(w_priv + 3) << "Private Key*"
+			<< std::setw(w_note + 3) << "Note"
+			<< '\n';
+		std::size_t total_w = 5 + (kDateColWidth + 3) + (w_chain + 3) + (w_symbol + 3) +
+			(w_pub + 3) + (w_priv + 3) + (w_note + 3);
+		header << "  " << std::string(total_w, '-');
+		term->show_message(header.str());
+		for (std::size_t i = 0; i < records.size(); ++i) {
+			const auto& r = records[i];
+			std::ostringstream row;
+			row << "  "
+				<< std::left
+				<< std::setw(5) << (i + 1)
+				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
+				<< std::setw(w_chain + 3) << (r.chain.empty() ? "---" : r.chain)
+				<< std::setw(w_symbol + 3) << (r.symbol.empty() ? "---" : r.symbol)
+				<< std::setw(w_pub + 3) << (r.publickey.empty() ? "---" : r.publickey)
+				<< std::setw(w_priv + 3) << (r.privatekey.empty() ? "---" : r.privatekey)
+				<< std::setw(w_note + 3) << (r.note.empty() ? "---" : r.note);
+			term->show_message(row.str());
+		}
+		term->show_message("\n  Total key records: " + std::to_string(records.size()));
+	}
 }

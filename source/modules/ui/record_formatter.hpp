@@ -11,4 +11,5 @@ namespace ui {
 	void display_transportcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_mnemonic_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_wifi_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
+	void display_key_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 }

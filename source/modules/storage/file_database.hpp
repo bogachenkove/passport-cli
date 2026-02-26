@@ -8,6 +8,7 @@
 #include "../models/transport_card_record.hpp"
 #include "../models/mnemonic_record.hpp"
 #include "../models/wifi_record.hpp"
+#include "../models/key_record.hpp"
 #include "../crypto/type_system.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +34,7 @@ namespace security::storage {
 		void add_transportcard_record(domain::models::TransportCardRecord record) override;
 		void add_mnemonic_record(domain::models::MnemonicRecord record) override;
 		void add_wifi_record(domain::models::WiFiRecord record) override;
+		void add_key_record(domain::models::KeyRecord record) override;
 		bool remove_password_record(std::size_t index) override;
 		bool remove_note_record(std::size_t index) override;
 		bool remove_bankcard_record(std::size_t index) override;
@@ -40,6 +42,7 @@ namespace security::storage {
 		bool remove_transportcard_record(std::size_t index) override;
 		bool remove_mnemonic_record(std::size_t index) override;
 		bool remove_wifi_record(std::size_t index) override;
+		bool remove_key_record(std::size_t index) override;
 		[[nodiscard]] const std::vector<domain::models::PasswordRecord>& password_records() const noexcept override;
 		[[nodiscard]] const std::vector<domain::models::NoteRecord>& note_records() const noexcept override;
 		[[nodiscard]] const std::vector<domain::models::BankCardRecord>& bankcard_records() const noexcept override;
@@ -47,6 +50,7 @@ namespace security::storage {
 		[[nodiscard]] const std::vector<domain::models::TransportCardRecord>& transportcard_records() const noexcept override;
 		[[nodiscard]] const std::vector<domain::models::MnemonicRecord>& mnemonic_records() const noexcept override;
 		[[nodiscard]] const std::vector<domain::models::WiFiRecord>& wifi_records() const noexcept override;
+		[[nodiscard]] const std::vector<domain::models::KeyRecord>& key_records() const noexcept override;
 		[[nodiscard]] std::size_t password_record_count() const noexcept override;
 		[[nodiscard]] std::size_t note_record_count() const noexcept override;
 		[[nodiscard]] std::size_t bankcard_record_count() const noexcept override;
@@ -54,6 +58,7 @@ namespace security::storage {
 		[[nodiscard]] std::size_t transportcard_record_count() const noexcept override;
 		[[nodiscard]] std::size_t mnemonic_record_count() const noexcept override;
 		[[nodiscard]] std::size_t wifi_record_count() const noexcept override;
+		[[nodiscard]] std::size_t key_record_count() const noexcept override;
 		[[nodiscard]] std::size_t record_count() const noexcept override;
 		[[nodiscard]] std::uint64_t timestamp_created() const noexcept override;
 		[[nodiscard]] std::uint64_t timestamp_modified() const noexcept override;
@@ -66,6 +71,7 @@ namespace security::storage {
 		std::vector<domain::models::TransportCardRecord> transport_records_;
 		std::vector<domain::models::MnemonicRecord> mnemonic_records_;
 		std::vector<domain::models::WiFiRecord> wifi_records_;
+		std::vector<domain::models::KeyRecord> key_records_;
 		security::crypto::TypeSystem type_system_;
 		std::uint64_t ts_created_ = 0;
 		std::uint64_t ts_modified_ = 0;

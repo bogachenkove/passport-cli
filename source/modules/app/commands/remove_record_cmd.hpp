@@ -20,5 +20,6 @@ namespace app::commands {
 		void remove_transportcard_records();
 		void remove_mnemonic_records();
 		void remove_wifi_records();
+		void remove_key_records();
 	};
 }

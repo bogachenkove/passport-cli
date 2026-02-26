@@ -147,6 +147,10 @@ namespace app::commands {
 				term_->show_error("Card number must contain only digits.");
 				continue;
 			}
+			if (!domain::validation::is_luhn_valid(rec.card_number)) {
+				term_->show_error("Card number failed Luhn check. Please re-enter.");
+				continue;
+			}
 			break;
 		}
 		while (true) {
@@ -290,6 +294,9 @@ namespace app::commands {
 				term_->show_error("Card number must contain only digits.");
 				continue;
 			}
+			if (!domain::validation::is_luhn_valid(rec.card_number)) {
+				term_->show_message("  [!] Warning: Card number does not pass Luhn check (may still be valid).");
+			}
 			break;
 		}
 		while (true) {
@@ -390,6 +397,9 @@ namespace app::commands {
 			if (!domain::validation::is_digits_only(rec.card_number)) {
 				term_->show_error("Card number must contain only digits.");
 				continue;
+			}
+			if (!domain::validation::is_luhn_valid(rec.card_number)) {
+				term_->show_message("  [!] Warning: Card number does not pass Luhn check (may still be valid).");
 			}
 			break;
 		}
@@ -724,11 +734,60 @@ namespace app::commands {
 		}
 		return rec;
 	}
+	domain::models::KeyRecord AddRecordCommand::prompt_key_record() {
+		domain::models::KeyRecord rec;
+		term_->show_message("\n  --- Add New Key Record (* = required) ---\n");
+		while (true) {
+			rec.chain = term_->prompt_input("  Chain/Network* (3-15 ASCII): ");
+			if (domain::validation::is_ascii_field_valid(rec.chain,
+				core::constants::kNetworkMinLength_Key,
+				core::constants::kNetworkMaxLength_Key, false))
+				break;
+			term_->show_error("Chain is required and must be 3-15 printable ASCII characters.");
+		}
+		while (true) {
+			rec.symbol = term_->prompt_input("  Symbol* (3-4 ASCII, e.g. BTC, ETH): ");
+			if (domain::validation::is_ascii_field_valid(rec.symbol,
+				core::constants::kSymbolMinLength_Key,
+				core::constants::kSymbolMaxLength_Key, false))
+				break;
+			term_->show_error("Symbol must be 3-4 printable ASCII characters.");
+		}
+		while (true) {
+			rec.publickey = term_->prompt_input("  Public Key* (64-128 hex/ASCII): ");
+			if (domain::validation::is_ascii_field_valid(rec.publickey,
+				core::constants::kPublicMinLength_Key,
+				core::constants::kPublicMaxLength_Key, false))
+				break;
+			term_->show_error("Public key must be 64-128 printable ASCII characters.");
+		}
+		while (true) {
+			rec.privatekey = term_->prompt_input("  Private Key* (64-128 hex/ASCII): ");
+			if (domain::validation::is_ascii_field_valid(rec.privatekey,
+				core::constants::kPrivateMinLength_Key,
+				core::constants::kPrivateMaxLength_Key, false))
+				break;
+			term_->show_error("Private key must be 64-128 printable ASCII characters.");
+		}
+		while (true) {
+			rec.note = term_->prompt_input("  Note (5-30 ASCII, optional, leave empty for ---): ");
+			if (domain::validation::is_field_empty(rec.note)) {
+				rec.note.clear();
+				break;
+			}
+			if (domain::validation::is_ascii_field_valid(rec.note,
+				core::constants::kNoteMinLength_Key,
+				core::constants::kNoteMaxLength_Key, true))
+				break;
+			term_->show_error("If provided, note must be 5-30 printable ASCII characters.");
+		}
+		return rec;
+	}
 	void AddRecordCommand::execute() {
 		term_->show_message("\nWhat type of record would you like to add?");
 		term_->show_message("  [P]assword");
-		term_->show_message("  [C]ards");
-		term_->show_message("  [M]nemonic");
+		term_->show_message("  [C]ard");
+		term_->show_message("  [H]ash");
 		term_->show_message("  [N]ote");
 		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
@@ -742,12 +801,36 @@ namespace app::commands {
 				term_->show_success("Password record added successfully.");
 				return;
 			}
-			else if (key == 'm') {
-				auto rec = prompt_mnemonic_record();
-				db_->add_mnemonic_record(std::move(rec));
-				term_->show_success("Mnemonic record added successfully.");
-				return;
+			else if (key == 'h') {
+				while (true) {
+					term_->show_message("\nSelect hash type to remove:");
+					term_->show_message("  [M]nemonic");
+					term_->show_message("  [K]ey");
+					term_->show_message("  [Q]uit to previous menu\n");
+					auto hash_choice = term_->prompt_input("  Your choice: ");
+					if (hash_choice.empty()) continue;
+					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice[0]));
+					if (hash_key == 'm') {
+						auto rec = prompt_mnemonic_record();
+						db_->add_mnemonic_record(std::move(rec));
+						term_->show_success("Mnemonic record added successfully.");
+						return;
+					}
+					else if (hash_key == 'k') {
+						auto rec = prompt_key_record();
+						db_->add_key_record(std::move(rec));
+						term_->show_success("Key record added successfully.");
+						return;
+					}
+					else if (hash_key == 'q') {
+						break;
+					}
+					else {
+						term_->show_error("Invalid option. Please press M, K or Q.");
+					}
+				}
 			}
+
 			else if (key == 'n') {
 				auto rec = prompt_note_record();
 				db_->add_note_record(std::move(rec));

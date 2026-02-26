@@ -17,8 +17,8 @@ namespace app::commands {
 		}
 		term_->show_message("\nWhich records would you like to view?");
 		term_->show_message("  [P]asswords");
-		term_->show_message("  [C]ards");
-		term_->show_message("  [M]nemonic");
+		term_->show_message("  [C]ard");
+		term_->show_message("  [H]ash");
 		term_->show_message("  [N]otes");
 		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
@@ -33,6 +33,35 @@ namespace app::commands {
 			else if (key == 'm') {
 				ui::display_mnemonic_records(*db_, term_);
 				return;
+			}
+			else if (key == 'k') {
+				ui::display_key_records(*db_, term_);
+				return;
+			}
+			else if (key == 'h') {
+				while (true) {
+					term_->show_message("\nSelect hash type to remove:");
+					term_->show_message("  [M]nemonic");
+					term_->show_message("  [K]ey");
+					term_->show_message("  [Q]uit to previous menu\n");
+					auto hash_choice = term_->prompt_input("  Your choice: ");
+					if (hash_choice.empty()) continue;
+					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice[0]));
+					if (hash_key == 'm') {
+						ui::display_mnemonic_records(*db_, term_);
+						return;
+					}
+					else if (hash_key == 'k') {
+						ui::display_key_records(*db_, term_);
+						return;
+					}
+					else if (hash_key == 'q') {
+						break;
+					}
+					else {
+						term_->show_error("Invalid option. Please press M, K or Q.");
+					}
+				}
 			}
 			else if (key == 'n') {
 				ui::display_note_records(*db_, term_);

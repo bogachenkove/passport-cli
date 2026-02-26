@@ -80,6 +80,7 @@ namespace app::commands {
 		add_count(db_->transportcard_record_count(), "transport card record");
 		add_count(db_->mnemonic_record_count(), "mnemonic record");
 		add_count(db_->wifi_record_count(), "Wi-Fi record");
+		add_count(db_->key_record_count(), "key record");
 		if (success_msg != "Database loaded.") {
 			success_msg.pop_back();
 			success_msg += ".";

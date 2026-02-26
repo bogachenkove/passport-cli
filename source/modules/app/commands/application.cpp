@@ -98,7 +98,7 @@ namespace app {
 			term_->clear_screen();
 			term_->show_message("");
 			term_->show_message("  ======================================");
-			term_->show_message("        Secure Password Manager");
+			term_->show_message("        Secure Database");
 			term_->show_message("  ======================================");
 			term_->show_message("");
 			run_startup_menu();

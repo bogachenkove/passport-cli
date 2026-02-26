@@ -43,7 +43,7 @@ namespace core::constants {
 	inline constexpr std::size_t kNoteMaxLength_BankCard = 30;
 	inline constexpr std::size_t kCardNumberMinLength_DiscountCard = 8;
 	inline constexpr std::size_t kCardNumberMaxLength_DiscountCard = 16;
-	inline constexpr std::size_t kBarCodeMinLength_DiscountCard = 6;
+	inline constexpr std::size_t kBarCodeMinLength_DiscountCard = 12;
 	inline constexpr std::size_t kBarCodeMaxLength_DiscountCard = 13;
 	inline constexpr std::size_t kCVVMinLength_DiscountCard = 3;
 	inline constexpr std::size_t kCVVMaxLength_DiscountCard = 4;
@@ -53,7 +53,7 @@ namespace core::constants {
 	inline constexpr std::size_t kNoteMaxLength_DiscountCard = 30;
 	inline constexpr std::size_t kCardNumberMinLength_TransportCard = 8;
 	inline constexpr std::size_t kCardNumberMaxLength_TransportCard = 16;
-	inline constexpr std::size_t kBarCodeMinLength_TransportCard = 6;
+	inline constexpr std::size_t kBarCodeMinLength_TransportCard = 12;
 	inline constexpr std::size_t kBarCodeMaxLength_TransportCard = 13;
 	inline constexpr std::size_t kCVVMinLength_TransportCard = 3;
 	inline constexpr std::size_t kCVVMaxLength_TransportCard = 4;
@@ -74,6 +74,16 @@ namespace core::constants {
 	inline constexpr std::size_t kPasswordMaxLength_WiFi = 128;
 	inline constexpr std::size_t kNoteMinLength_WiFi = 5;
 	inline constexpr std::size_t kNoteMaxLength_WiFi = 30;
+	inline constexpr std::size_t kNetworkMinLength_Key = 3;
+	inline constexpr std::size_t kNetworkMaxLength_Key = 15;
+	inline constexpr std::size_t kSymbolMinLength_Key = 3;
+	inline constexpr std::size_t kSymbolMaxLength_Key = 4;
+	inline constexpr std::size_t kPublicMinLength_Key = 64;
+	inline constexpr std::size_t kPublicMaxLength_Key = 128;
+	inline constexpr std::size_t kPrivateMinLength_Key = 64;
+	inline constexpr std::size_t kPrivateMaxLength_Key = 128;
+	inline constexpr std::size_t kNoteMinLength_Key = 5;
+	inline constexpr std::size_t kNoteMaxLength_Key = 30;
 	inline constexpr const char* kLowercaseChars = "abcdefghijklmnopqrstuvwxyz";
 	inline constexpr const char* kUppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	inline constexpr const char* kDigitChars = "0123456789";
