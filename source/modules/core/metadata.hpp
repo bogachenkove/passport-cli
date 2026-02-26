@@ -5,17 +5,17 @@
 #include <fstream>
 #include <sstream>
 #define ProductName "Passport CLI"
-#define FileDescription "Secure Password Manager"
+#define FileDescription "Secure Password Database"
 #define ProductVersion "0.0.0.10"
 #define License "MIT License"
+#define LicenseFile "LICENSE.txt"
 #define Copyright "Copyright (c) 2026 Bogachenko Vyacheslav. All rights reserved."
 #define Author "Bogachenko Vyacheslav"
 #define Contact "bogachenkove@outlook.com"
 #define Homepage "https://github.com/bogachenkove/passport"
-#define LICENSE_FILE_PATH "LICENSE.txt"
 
 inline std::string read_license_file() {
-	std::ifstream file(LICENSE_FILE_PATH);
+	std::ifstream file(LicenseFile);
 	if (!file.is_open()) {
 		return "Please read the license agreement at https://raw.githubusercontent.com/bogachenkove/passport/stable/LICENSE.md";
 	}

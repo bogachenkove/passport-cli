@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace domain::models {
-	struct MnemonicPhraseRecord {
+	struct MnemonicRecord {
 		std::uint64_t date = 0;
 		std::uint64_t value = 0;
 		std::vector<std::string> mnemonic;

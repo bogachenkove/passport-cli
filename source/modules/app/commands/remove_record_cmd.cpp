@@ -1,8 +1,8 @@
 #include "remove_record_cmd.hpp"
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_database.hpp"
-#include "../utils/input_parser.hpp"
 #include "../../ui/record_formatter.hpp"
+#include "../utils/input_parser.hpp"
 #include <memory>
 #include <cctype>
 #include <cstddef>
@@ -168,15 +168,15 @@ namespace app::commands {
 			term_->show_error("No records were removed.");
 		}
 	}
-	void RemoveRecordCommand::remove_mnemonicphrase_records() {
-		if (db_->mnemonicphrase_record_count() == 0) {
-			term_->show_message("No mnemonic phrase records to remove.");
+	void RemoveRecordCommand::remove_mnemonic_records() {
+		if (db_->mnemonic_record_count() == 0) {
+			term_->show_message("No mnemonic records to remove.");
 			return;
 		}
-		ui::display_mnemonicphrase_records(*db_, term_);
+		ui::display_mnemonic_records(*db_, term_);
 		auto input = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		auto indices = app::utils::parse_record_numbers(input, db_->mnemonicphrase_record_count());
+		auto indices = app::utils::parse_record_numbers(input, db_->mnemonic_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
@@ -186,14 +186,42 @@ namespace app::commands {
 		}
 		int removed = 0;
 		for (std::size_t idx : indices) {
-			if (db_->remove_mnemonicphrase_record(idx))
+			if (db_->remove_mnemonic_record(idx))
 				++removed;
 		}
 		if (removed > 0) {
 			if (removed == 1)
-				term_->show_success("1 mnemonic phrase record removed.");
+				term_->show_success("1 mnemonic record removed.");
 			else
-				term_->show_success(std::to_string(removed) + " mnemonic phrase records removed.");
+				term_->show_success(std::to_string(removed) + " mnemonic records removed.");
+		}
+		else {
+			term_->show_error("No records were removed.");
+		}
+	}
+	void RemoveRecordCommand::remove_wifi_records() {
+		if (db_->wifi_record_count() == 0) {
+			term_->show_message("No Wi-Fi network records to remove.");
+			return;
+		}
+		ui::display_wifi_records(*db_, term_);
+		auto input = term_->prompt_input(
+			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		auto indices = app::utils::parse_record_numbers(input, db_->wifi_record_count());
+		if (indices.empty()) {
+			if (input.find('0') != std::string::npos)
+				term_->show_message("Removal cancelled.");
+			else
+				term_->show_error("No valid records to remove.");
+			return;
+		}
+		int removed = 0;
+		for (std::size_t idx : indices) {
+			if (db_->remove_wifi_record(idx))
+				++removed;
+		}
+		if (removed > 0) {
+			term_->show_success(std::to_string(removed) + " Wi-Fi network record(s) removed.");
 		}
 		else {
 			term_->show_error("No records were removed.");
@@ -207,8 +235,9 @@ namespace app::commands {
 		term_->show_message("\nWhich type of record would you like to remove?");
 		term_->show_message("  [P]assword");
 		term_->show_message("  [C]ards");
-		term_->show_message("  [M]nemonic phrase");
+		term_->show_message("  [M]nemonic");
 		term_->show_message("  [N]ote");
+		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -219,11 +248,15 @@ namespace app::commands {
 				return;
 			}
 			else if (key == 'm') {
-				remove_mnemonicphrase_records();
+				remove_mnemonic_records();
 				return;
 			}
 			else if (key == 'n') {
 				remove_note_records();
+				return;
+			}
+			else if (key == 'w') {
+				remove_wifi_records();
 				return;
 			}
 			else if (key == 'c') {

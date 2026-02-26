@@ -18,8 +18,9 @@ namespace app::commands {
 		term_->show_message("\nWhich records would you like to view?");
 		term_->show_message("  [P]asswords");
 		term_->show_message("  [C]ards");
-		term_->show_message("  [M]nemonic phrase");
+		term_->show_message("  [M]nemonic");
 		term_->show_message("  [N]otes");
+		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -30,11 +31,15 @@ namespace app::commands {
 				return;
 			}
 			else if (key == 'm') {
-				ui::display_mnemonicphrase_records(*db_, term_);
+				ui::display_mnemonic_records(*db_, term_);
 				return;
 			}
 			else if (key == 'n') {
 				ui::display_note_records(*db_, term_);
+				return;
+			}
+			else if (key == 'w') {
+				ui::display_wifi_records(*db_, term_);
 				return;
 			}
 			else if (key == 'c') {

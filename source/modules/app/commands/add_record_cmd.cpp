@@ -521,9 +521,9 @@ namespace app::commands {
 		}
 		return rec;
 	}
-	domain::models::MnemonicPhraseRecord AddRecordCommand::prompt_mnemonicphrase_record() {
-		domain::models::MnemonicPhraseRecord rec;
-		term_->show_message("\n  --- Add New Mnemonic Phrase Record (* = required) ---\n");
+	domain::models::MnemonicRecord AddRecordCommand::prompt_mnemonic_record() {
+		domain::models::MnemonicRecord rec;
+		term_->show_message("\n  --- Add New Mnemonic Record (* = required) ---\n");
 		std::string lang;
 		const std::map<std::string, const std::vector<std::string>*> lang_map = {
 		  {"english", &english_wordlist},
@@ -619,8 +619,8 @@ namespace app::commands {
 			}
 			pp = domain::validation::normalize_nfkd(pp);
 			if (domain::validation::is_ascii_field_valid(pp,
-				core::constants::kPassphraseMinLength_MnemonicPhrase,
-				core::constants::kPassphraseMaxLength_MnemonicPhrase, true)) {
+				core::constants::kPassphraseMinLength_Mnemonic,
+				core::constants::kPassphraseMaxLength_Mnemonic, true)) {
 				rec.passphrase = pp;
 				break;
 			}
@@ -628,17 +628,17 @@ namespace app::commands {
 		}
 		while (true) {
 			std::string iter_str = term_->prompt_input("  Iteration (optional, " +
-				std::to_string(core::constants::kIterationMin_MnemonicPhrase) + "-" +
-				std::to_string(core::constants::kIterationMax_MnemonicPhrase) +
+				std::to_string(core::constants::kIterationMin_Mnemonic) + "-" +
+				std::to_string(core::constants::kIterationMax_Mnemonic) +
 				", default 2048, leave empty for default): ");
 			if (domain::validation::is_field_empty(iter_str)) {
-				rec.iteration = core::constants::kIterationMin_MnemonicPhrase;
+				rec.iteration = core::constants::kIterationMin_Mnemonic;
 				break;
 			}
 			try {
 				std::uint32_t iter = static_cast<std::uint32_t>(std::stoul(iter_str));
-				if (iter >= core::constants::kIterationMin_MnemonicPhrase &&
-					iter <= core::constants::kIterationMax_MnemonicPhrase) {
+				if (iter >= core::constants::kIterationMin_Mnemonic &&
+					iter <= core::constants::kIterationMax_Mnemonic) {
 					rec.iteration = iter;
 					break;
 				}
@@ -646,8 +646,8 @@ namespace app::commands {
 			catch (...) {
 			}
 			term_->show_error("Invalid iteration. Must be a number between " +
-				std::to_string(core::constants::kIterationMin_MnemonicPhrase) + " and " +
-				std::to_string(core::constants::kIterationMax_MnemonicPhrase) + ".");
+				std::to_string(core::constants::kIterationMin_Mnemonic) + " and " +
+				std::to_string(core::constants::kIterationMax_Mnemonic) + ".");
 		}
 		while (true) {
 			std::string note = term_->prompt_input("  Note (optional, 5-30 ASCII, leave empty for ---): ");
@@ -656,8 +656,8 @@ namespace app::commands {
 				break;
 			}
 			if (domain::validation::is_ascii_field_valid(note,
-				core::constants::kNoteMinLength_MnemonicPhrase,
-				core::constants::kNoteMaxLength_MnemonicPhrase, true)) {
+				core::constants::kNoteMinLength_Mnemonic,
+				core::constants::kNoteMaxLength_Mnemonic, true)) {
 				rec.note = note;
 				break;
 			}
@@ -666,12 +666,71 @@ namespace app::commands {
 		rec.language = lang;
 		return rec;
 	}
+	domain::models::WiFiRecord AddRecordCommand::prompt_wifi_record() {
+		domain::models::WiFiRecord rec;
+		term_->show_message("\n  --- Add New Wi-Fi Network Record (* = required) ---\n");
+		while (true) {
+			rec.ssid = term_->prompt_input("  SSID* (3-30 ASCII characters): ");
+			if (domain::validation::is_ascii_field_valid(rec.ssid,
+				core::constants::kSSIDMinLength_WiFi,
+				core::constants::kSSIDMaxLength_WiFi, false))
+				break;
+			term_->show_error("SSID is required and must be 3-30 printable ASCII characters.");
+		}
+		while (true) {
+			rec.password = term_->prompt_input("  Password (8-128 ASCII, optional, leave empty for ---): ");
+			if (domain::validation::is_field_empty(rec.password)) {
+				rec.password.clear();
+				break;
+			}
+			if (domain::validation::is_ascii_field_valid(rec.password,
+				core::constants::kPasswordMinLength_WiFi,
+				core::constants::kPasswordMaxLength_WiFi, true))
+				break;
+			term_->show_error("If provided, password must be 8-128 printable ASCII characters.");
+		}
+		const std::vector<std::string> allowed_security = {
+			"WEP", "WPA-Personal", "WPA2-Personal", "WPA3-Personal",
+			"WPA-Enterprise", "WPA2-Enterprise", "WPA3-Enterprise",
+			"Open", "OWE"
+		};
+		while (true) {
+			term_->show_message("  Supported security types:");
+			term_->show_message("    WEP, WPA-Personal, WPA2-Personal, WPA3-Personal,");
+			term_->show_message("    WPA-Enterprise, WPA2-Enterprise, WPA3-Enterprise,");
+			term_->show_message("    Open, OWE");
+			rec.security = term_->prompt_input("  Security*: ");
+			bool valid = false;
+			for (const auto& s : allowed_security) {
+				if (rec.security == s) {
+					valid = true;
+					break;
+				}
+			}
+			if (valid) break;
+			term_->show_error("Invalid security type. Please choose from the list.");
+		}
+		while (true) {
+			rec.note = term_->prompt_input("  Note (5-30 ASCII, optional, leave empty for ---): ");
+			if (domain::validation::is_field_empty(rec.note)) {
+				rec.note.clear();
+				break;
+			}
+			if (domain::validation::is_ascii_field_valid(rec.note,
+				core::constants::kNoteMinLength_WiFi,
+				core::constants::kNoteMaxLength_WiFi, true))
+				break;
+			term_->show_error("If provided, note must be 5-30 printable ASCII characters.");
+		}
+		return rec;
+	}
 	void AddRecordCommand::execute() {
 		term_->show_message("\nWhat type of record would you like to add?");
 		term_->show_message("  [P]assword");
 		term_->show_message("  [C]ards");
-		term_->show_message("  [M]nemonic phrase");
+		term_->show_message("  [M]nemonic");
 		term_->show_message("  [N]ote");
+		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
@@ -684,15 +743,21 @@ namespace app::commands {
 				return;
 			}
 			else if (key == 'm') {
-				auto rec = prompt_mnemonicphrase_record();
-				db_->add_mnemonicphrase_record(std::move(rec));
-				term_->show_success("Mnemonic phrase record added successfully.");
+				auto rec = prompt_mnemonic_record();
+				db_->add_mnemonic_record(std::move(rec));
+				term_->show_success("Mnemonic record added successfully.");
 				return;
 			}
 			else if (key == 'n') {
 				auto rec = prompt_note_record();
 				db_->add_note_record(std::move(rec));
 				term_->show_success("Note record added successfully.");
+				return;
+			}
+			else if (key == 'w') {
+				auto rec = prompt_wifi_record();
+				db_->add_wifi_record(std::move(rec));
+				term_->show_success("Wi-Fi network record added successfully.");
 				return;
 			}
 			else if (key == 'c') {

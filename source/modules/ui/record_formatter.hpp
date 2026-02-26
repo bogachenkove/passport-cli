@@ -9,5 +9,6 @@ namespace ui {
 	void display_bankcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_discountcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 	void display_transportcard_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
-	void display_mnemonicphrase_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
+	void display_mnemonic_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
+	void display_wifi_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term);
 }

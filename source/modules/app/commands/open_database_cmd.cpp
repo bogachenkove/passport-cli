@@ -67,12 +67,27 @@ namespace app::commands {
 			term_->show_error(std::string("Error: ") + e.what());
 			return false;
 		}
-		term_->show_success(
-			"Database loaded. " +
-			std::to_string(db_->password_record_count()) + " password record(s), " +
-			std::to_string(db_->note_record_count()) + " note record(s) found, " +
-			std::to_string(db_->bankcard_record_count()) + " bank card record(s) found, " +
-			std::to_string(db_->discountcard_record_count()) + " discount card record(s) found.");
+		std::string success_msg = "Database loaded.";
+		auto add_count = [&](std::size_t count, const std::string& label) {
+			if (count > 0) {
+				success_msg += " " + std::to_string(count) + " " + label + (count == 1 ? "" : "s") + ";";
+			}
+		};
+		add_count(db_->password_record_count(), "password record");
+		add_count(db_->note_record_count(), "note record");
+		add_count(db_->bankcard_record_count(), "bank card record");
+		add_count(db_->discountcard_record_count(), "discount card record");
+		add_count(db_->transportcard_record_count(), "transport card record");
+		add_count(db_->mnemonic_record_count(), "mnemonic record");
+		add_count(db_->wifi_record_count(), "Wi-Fi record");
+		if (success_msg != "Database loaded.") {
+			success_msg.pop_back();
+			success_msg += ".";
+		}
+		else {
+			success_msg += " (empty)";
+		}
+		term_->show_success(success_msg);
 		out_db_path = path;
 		out_master_pw = pw;
 		return true;

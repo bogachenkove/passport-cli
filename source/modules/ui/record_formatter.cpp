@@ -274,11 +274,11 @@ namespace ui {
 		}
 		term->show_message("\n  Total transport card records: " + std::to_string(records.size()));
 	}
-	void display_mnemonicphrase_records(
+	void display_mnemonic_records(
 		const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
-		const auto& records = db.mnemonicphrase_records();
+		const auto& records = db.mnemonic_records();
 		if (records.empty()) {
-			term->show_message("\n  No mnemonic phrase records to display.");
+			term->show_message("\n  No mnemonic records to display.");
 			return;
 		}
 		constexpr std::size_t kDateColWidth = 16;
@@ -307,7 +307,7 @@ namespace ui {
 			if (note.size() > w_note) w_note = note.size();
 		}
 		std::ostringstream header;
-		header << "\n  --- Mnemonic Phrase Records (* = required) ---\n\n";
+		header << "\n  --- Mnemonic Records (* = required) ---\n\n";
 		header << "  "
 			<< std::left
 			<< std::setw(5) << "#"
@@ -345,6 +345,53 @@ namespace ui {
 				<< std::setw(w_note + 3) << format_field(r.note);
 			term->show_message(row.str());
 		}
-		term->show_message("\n  Total mnemonic phrase records: " + std::to_string(records.size()));
+		term->show_message("\n  Total mnemonic records: " + std::to_string(records.size()));
+	}
+	void ui::display_wifi_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+		const auto& records = db.wifi_records();
+		if (records.empty()) {
+			term->show_message("\n  No Wi-Fi network records to display.");
+			return;
+		}
+		constexpr std::size_t kDateColWidth = 16;
+		std::size_t w_ssid = 5, w_pass = 8, w_sec = 10, w_note = 5;
+		for (const auto& r : records) {
+			auto s = r.ssid.empty() ? "---" : r.ssid;
+			auto p = r.password.empty() ? "---" : r.password;
+			auto sec = r.security.empty() ? "---" : r.security;
+			auto n = r.note.empty() ? "---" : r.note;
+			if (s.size() > w_ssid) w_ssid = s.size();
+			if (p.size() > w_pass) w_pass = p.size();
+			if (sec.size() > w_sec) w_sec = sec.size();
+			if (n.size() > w_note) w_note = n.size();
+		}
+		std::ostringstream header;
+		header << "\n  --- Wi-Fi Network Records (* = required) ---\n\n";
+		header << "  "
+			<< std::left
+			<< std::setw(5) << "#"
+			<< std::setw(kDateColWidth + 3) << "Date"
+			<< std::setw(w_ssid + 3) << "SSID*"
+			<< std::setw(w_pass + 3) << "Password"
+			<< std::setw(w_sec + 3) << "Security*"
+			<< std::setw(w_note + 3) << "Note"
+			<< '\n';
+		std::size_t total_w = 5 + (kDateColWidth + 3) + (w_ssid + 3) + (w_pass + 3) + (w_sec + 3) + (w_note + 3);
+		header << "  " << std::string(total_w, '-');
+		term->show_message(header.str());
+		for (std::size_t i = 0; i < records.size(); ++i) {
+			const auto& r = records[i];
+			std::ostringstream row;
+			row << "  "
+				<< std::left
+				<< std::setw(5) << (i + 1)
+				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
+				<< std::setw(w_ssid + 3) << (r.ssid.empty() ? "---" : r.ssid)
+				<< std::setw(w_pass + 3) << (r.password.empty() ? "---" : r.password)
+				<< std::setw(w_sec + 3) << (r.security.empty() ? "---" : r.security)
+				<< std::setw(w_note + 3) << (r.note.empty() ? "---" : r.note);
+			term->show_message(row.str());
+		}
+		term->show_message("\n  Total Wi-Fi network records: " + std::to_string(records.size()));
 	}
 }
