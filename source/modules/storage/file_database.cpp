@@ -398,7 +398,7 @@ namespace security::storage {
 			};
 		}
 		off += 4;
-		if (off >= blob.size()) {
+		if (off >= blob.size() || blob[off] != core::constants::kFileMagicNull) {
 			throw core::errors::DeserialisationError{
 			  "Invalid file format: missing null byte after magic."
 			};
