@@ -6,7 +6,7 @@
 #include <sstream>
 #define ProductName "Passport CLI"
 #define FileDescription "Secure Password Database"
-#define ProductVersion "0.0.0.10"
+#define ProductVersion "0.0.0.15"
 #define License "MIT License"
 #define LicenseFile "LICENSE.txt"
 #define Copyright "Copyright (c) 2026 Bogachenko Vyacheslav. All rights reserved."
