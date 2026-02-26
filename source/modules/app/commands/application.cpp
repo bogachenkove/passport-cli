@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "../../core/constants.hpp"
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_crypto_service.hpp"
 #include "../../interface/interface_database.hpp"
@@ -47,7 +48,26 @@ namespace app {
 	void Application::run_main_menu() {
 		bool running = true;
 		while (running) {
+			auto remaining = db_->estimate_remaining_capacity();
+			auto total = core::constants::kMaxFileSize;
+			auto used = total - remaining;
+			auto format_size = [](std::size_t bytes) -> std::string {
+				const char* units[] = { "B", "KB", "MB", "GB" };
+				int unit = 0;
+				double size = static_cast<double>(bytes);
+				while (size >= 1024.0 && unit < 3) {
+					size /= 1024.0;
+					++unit;
+				}
+				char buf[32];
+				std::snprintf(buf, sizeof(buf), "%.2f %s", size, units[unit]);
+				return std::string(buf);
+				};
+			std::string storage_info = "  Storage: " + format_size(used) + " used, " +
+				format_size(remaining) + " free";
 			term_->show_message("\n--- Main Menu ---\n");
+			term_->show_message(storage_info);
+			term_->show_message("");
 			term_->show_message("  [L]ist records");
 			term_->show_message("  [A]dd a new record");
 			term_->show_message("  [R]emove a record");

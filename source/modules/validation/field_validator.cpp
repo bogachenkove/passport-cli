@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <regex>
 #include <string>
+#include <vector>
+#include <cstdint>
+#include <sodium.h>
 
 namespace domain::validation {
 	bool is_field_empty(const std::string& value) {
@@ -89,5 +92,39 @@ namespace domain::validation {
 			alternate = !alternate;
 		}
 		return (sum % 10) == 0;
+	}
+	bool domain::validation::is_mnemonic_valid(const std::vector<std::string>& words, const std::vector<std::string>& wordlist) {
+		const size_t word_count = words.size();
+		if (word_count != 12 && word_count != 15 && word_count != 18 && word_count != 21 && word_count != 24) {
+			return false;
+		}
+		std::vector<uint16_t> indices(word_count);
+		for (size_t i = 0; i < word_count; ++i) {
+			auto it = std::find(wordlist.begin(), wordlist.end(), words[i]);
+			if (it == wordlist.end()) {
+				return false;
+			}
+			indices[i] = static_cast<uint16_t>(std::distance(wordlist.begin(), it));
+		}
+		const size_t total_bits = word_count * 11;
+		const size_t total_bytes = (total_bits + 7) / 8;
+		std::vector<uint8_t> bin(total_bytes, 0);
+		size_t bit_pos = 0;
+		for (uint16_t idx : indices) {
+			for (int b = 10; b >= 0; --b) {
+				if (idx & (1 << b)) {
+					bin[bit_pos / 8] |= (1 << (7 - (bit_pos % 8)));
+				}
+				++bit_pos;
+			}
+		}
+		const size_t cs_bits = word_count / 3;
+		const size_t entropy_bits = total_bits - cs_bits;
+		const size_t entropy_bytes = entropy_bits / 8;
+		std::vector<uint8_t> hash(crypto_hash_sha256_BYTES);
+		crypto_hash_sha256(hash.data(), bin.data(), entropy_bytes);
+		uint8_t stored_checksum = bin[entropy_bytes] >> (8 - cs_bits);
+		uint8_t expected_checksum = hash[0] >> (8 - cs_bits);
+		return stored_checksum == expected_checksum;
 	}
 }

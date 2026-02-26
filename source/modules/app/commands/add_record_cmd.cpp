@@ -583,42 +583,49 @@ namespace app::commands {
 			term_->show_error("Invalid word count. Must be one of: 12, 15, 18, 21, 24.");
 		}
 		const auto& wordlist = *lang_map.at(lang);
-		rec.mnemonic.reserve(rec.value);
-		for (std::size_t i = 0;
-			i < rec.value;
-			++i) {
-			while (true) {
-				std::string word = term_->prompt_input("  Word " + std::to_string(i + 1) + ": ");
-				size_t start = word.find_first_not_of(" \t\r\n");
-				if (start != std::string::npos) {
-					word = word.substr(start);
-				}
-				else {
-					word.clear();
-				}
-				size_t end = word.find_last_not_of(" \t\r\n");
-				if (end != std::string::npos) {
-					word = word.substr(0, end + 1);
-				}
-				if (word.empty()) {
-					term_->show_error("Word cannot be empty.");
-					continue;
-				}
-				std::string normalized_word = domain::validation::normalize_nfkd(word);
-				bool found = false;
-				for (const auto& dict_word : wordlist) {
-					if (domain::validation::normalize_nfkd(dict_word) == normalized_word) {
-						found = true;
+		bool phrase_valid = false;
+		while (!phrase_valid) {
+			rec.mnemonic.clear();
+			rec.mnemonic.reserve(rec.value);
+			for (std::size_t i = 0; i < rec.value; ++i) {
+				while (true) {
+					std::string word = term_->prompt_input("  Word " + std::to_string(i + 1) + ": ");
+					size_t start = word.find_first_not_of(" \t\r\n");
+					if (start != std::string::npos)
+						word = word.substr(start);
+					else
+						word.clear();
+					size_t end = word.find_last_not_of(" \t\r\n");
+					if (end != std::string::npos)
+						word = word.substr(0, end + 1);
+					else
+						word.clear();
+					if (word.empty()) {
+						term_->show_error("Word cannot be empty.");
+						continue;
+					}
+					std::string normalized_word = domain::validation::normalize_nfkd(word);
+					bool found = false;
+					for (const auto& dict_word : wordlist) {
+						if (domain::validation::normalize_nfkd(dict_word) == normalized_word) {
+							found = true;
+							break;
+						}
+					}
+					if (found) {
+						rec.mnemonic.push_back(normalized_word);
 						break;
 					}
+					else {
+						term_->show_error("Invalid word. Not in the BIP39 " + lang + " wordlist.");
+					}
 				}
-				if (found) {
-					rec.mnemonic.push_back(normalized_word);
-					break;
-				}
-				else {
-					term_->show_error("Invalid word. Not in the BIP39 " + lang + " wordlist.");
-				}
+			}
+			if (domain::validation::is_mnemonic_valid(rec.mnemonic, wordlist)) {
+				phrase_valid = true;
+			}
+			else {
+				term_->show_error("Invalid mnemonic phrase (checksum mismatch). Please re-enter the entire phrase.");
 			}
 		}
 		while (true) {

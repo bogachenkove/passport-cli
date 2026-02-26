@@ -50,6 +50,7 @@ namespace domain::interfaces {
 		[[nodiscard]] virtual std::size_t mnemonic_record_count() const noexcept = 0;
 		[[nodiscard]] virtual std::size_t wifi_record_count() const noexcept = 0;
 		[[nodiscard]] virtual std::size_t key_record_count() const noexcept = 0;
+		[[nodiscard]] virtual std::size_t estimate_remaining_capacity() const = 0;
 		[[nodiscard]] virtual std::size_t record_count() const noexcept = 0;
 		[[nodiscard]] virtual std::uint64_t timestamp_created() const noexcept = 0;
 		[[nodiscard]] virtual std::uint64_t timestamp_modified() const noexcept = 0;

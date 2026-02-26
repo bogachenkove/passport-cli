@@ -10,6 +10,7 @@
 #include <sodium.h>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace security::storage {
 	FileDatabase::FileDatabase(std::shared_ptr<domain::interfaces::ICryptoService> crypto) : crypto_(std::move(crypto)) {
@@ -376,10 +377,18 @@ namespace security::storage {
 			std::istreambuf_iterator<char>());
 		in.close();
 		filesystem::storage::validate_blob_size(blob.size());
-		constexpr std::size_t kMinFileSize = core::constants::kHeaderAdSize + 4 + core::constants::kAeadTagBytes;
-		if (blob.size() < kMinFileSize) {
+		if (blob.size() != core::constants::kMaxFileSize) {
 			throw core::errors::DeserialisationError{
-			  "Database file is too small or truncated."
+			  "Database file size mismatch: expected " +
+			  std::to_string(core::constants::kMaxFileSize) +
+			  " bytes, got " + std::to_string(blob.size()) +
+			  ". This version only supports new format databases."
+			};
+		}
+		constexpr std::size_t kHeaderSize = core::constants::kHeaderAdSize;
+		if (blob.size() < kHeaderSize + 4) {
+			throw core::errors::DeserialisationError{
+			  "File too short."
 			};
 		}
 		std::size_t off = 0;
@@ -389,23 +398,48 @@ namespace security::storage {
 			};
 		}
 		off += 4;
-		if (off >= blob.size() || blob[off] != core::constants::kFileMagicNull) {
+		if (off >= blob.size()) {
 			throw core::errors::DeserialisationError{
 			  "Invalid file format: missing null byte after magic."
 			};
 		}
 		++off;
+		if (off + core::constants::kSaltBytes > blob.size()) {
+			throw core::errors::DeserialisationError{
+			  "Truncated file: missing salt."
+			};
+		}
 		std::vector<std::uint8_t> salt(blob.begin() + off,
 			blob.begin() + off + core::constants::kSaltBytes);
 		off += core::constants::kSaltBytes;
+		if (off + core::constants::kAeadNonceBytes > blob.size()) {
+			throw core::errors::DeserialisationError{
+			  "Truncated file: missing nonce."
+			};
+		}
 		std::vector<std::uint8_t> nonce(blob.begin() + off,
 			blob.begin() + off + core::constants::kAeadNonceBytes);
 		off += core::constants::kAeadNonceBytes;
+		if (off + 8 > blob.size()) {
+			throw core::errors::DeserialisationError{
+			  "Truncated file: missing created timestamp."
+			};
+		}
 		std::uint64_t stored_created = core::endian::read_u64_be(blob.data() + off);
 		off += 8;
+		if (off + 8 > blob.size()) {
+			throw core::errors::DeserialisationError{
+			  "Truncated file: missing modified timestamp."
+			};
+		}
 		std::uint64_t stored_modified = core::endian::read_u64_be(blob.data() + off);
 		off += 8;
 		off += 4;
+		if (off + 4 > blob.size()) {
+			throw core::errors::DeserialisationError{
+			  "Truncated file: missing payload length."
+			};
+		}
 		std::uint32_t payload_len = core::endian::read_u32_be(blob.data() + off);
 		off += 4;
 		if (off + payload_len > blob.size()) {
@@ -413,12 +447,33 @@ namespace security::storage {
 			  "Payload extends beyond end of file."
 			};
 		}
+		std::size_t ad_size = off - 4;
+		std::vector<std::uint8_t> ad(blob.begin(), blob.begin() + ad_size);
 		auto derived_key = crypto_->derive_key(master_password, salt);
-		std::vector<std::uint8_t> ad(blob.begin(), blob.begin() + core::constants::kHeaderAdSize);
 		std::vector<std::uint8_t> encrypted(blob.begin() + off,
 			blob.begin() + off + payload_len);
-		auto decrypted = crypto_->aead_decrypt(encrypted, ad, nonce, derived_key);
-		deserialize_records(decrypted);
+		auto padded_plaintext = crypto_->aead_decrypt(encrypted, ad, nonce, derived_key);
+		const std::size_t expected_padded_size = payload_len - core::constants::kAeadTagBytes;
+		if (padded_plaintext.size() != expected_padded_size) {
+			throw core::errors::DeserialisationError{
+			  "Decrypted plaintext size mismatch."
+			};
+		}
+		if (padded_plaintext.size() < 8) {
+			throw core::errors::DeserialisationError{
+			  "Padded plaintext too short."
+			};
+		}
+		uint64_t real_size = core::endian::read_u64_be(padded_plaintext.data());
+		if (real_size + 8 > padded_plaintext.size()) {
+			throw core::errors::DeserialisationError{
+			  "Declared data size exceeds padded plaintext."
+			};
+		}
+		std::vector<std::uint8_t> real_plaintext(
+			padded_plaintext.begin() + 8,
+			padded_plaintext.begin() + 8 + real_size);
+		deserialize_records(real_plaintext);
 		ts_created_ = stored_created;
 		ts_modified_ = stored_modified;
 		return true;
@@ -448,19 +503,49 @@ namespace security::storage {
 		core::endian::append_u64_be(header, ts_created_);
 		core::endian::append_u64_be(header, ts_modified_);
 		core::endian::append_u32_be(header, static_cast<std::uint32_t>(record_count()));
-		auto plaintext = serialize_records();
-		auto ciphertext_tag = crypto_->aead_encrypt(plaintext, header, nonce, derived_key);
+		std::vector<std::uint8_t> real_data = serialize_records();
+		uint64_t real_size = real_data.size();
+		const size_t header_size = header.size();
+		const size_t max_file_size = core::constants::kMaxFileSize;
+		const size_t max_ciphertext_size = max_file_size - header_size - 4;
+		const size_t padded_plaintext_size = max_ciphertext_size - core::constants::kAeadTagBytes;
+		if (real_size + 8 > padded_plaintext_size) {
+			throw core::errors::PolicyViolation(
+				"Database too large to fit in maximum file size.");
+		}
+		std::vector<std::uint8_t> padded_plaintext(padded_plaintext_size);
+		auto random_fill = crypto_->random_bytes(padded_plaintext_size);
+		std::copy(random_fill.begin(), random_fill.end(), padded_plaintext.begin());
+		core::endian::write_u64_be(padded_plaintext.data(), real_size);
+		std::copy(real_data.begin(), real_data.end(), padded_plaintext.begin() + 8);
+		std::vector<std::uint8_t> ciphertext = crypto_->aead_encrypt(
+			padded_plaintext, header, nonce, derived_key);
+		if (ciphertext.size() != max_ciphertext_size) {
+			throw core::errors::CryptoError("Unexpected ciphertext size after padding.");
+		}
 		std::vector<std::uint8_t> out;
-		out.reserve(header.size() + 4 + ciphertext_tag.size());
+		out.reserve(header_size + 4 + ciphertext.size());
 		out.insert(out.end(), header.begin(), header.end());
-		core::endian::append_u32_be(out, static_cast<std::uint32_t>(ciphertext_tag.size()));
-		out.insert(out.end(), ciphertext_tag.begin(), ciphertext_tag.end());
-		filesystem::storage::validate_blob_size(out.size());
+		core::endian::append_u32_be(out, static_cast<std::uint32_t>(ciphertext.size()));
+		out.insert(out.end(), ciphertext.begin(), ciphertext.end());
+		if (out.size() != max_file_size) {
+			throw core::errors::CryptoError("Final file size mismatch.");
+		}
 		std::ofstream ofs(file_path, std::ios::binary | std::ios::trunc);
 		if (!ofs.is_open()) return false;
 		ofs.write(reinterpret_cast<const char*>(out.data()),
 			static_cast<std::streamsize>(out.size()));
 		return ofs.good();
+	}
+	std::size_t FileDatabase::estimate_remaining_capacity() const {
+		std::vector<std::uint8_t> real_data = serialize_records();
+		std::size_t real_size = real_data.size();
+		const std::size_t fixed_overhead = core::constants::kHeaderAdSize + 4 + 8 + core::constants::kAeadTagBytes;
+		const std::size_t max_real_data = core::constants::kMaxFileSize - fixed_overhead;
+		if (real_size > max_real_data) {
+			return 0;
+		}
+		return max_real_data - real_size;
 	}
 	void FileDatabase::add_password_record(domain::models::PasswordRecord record) {
 		if (record.date == 0) record.date = unix_timestamp_now();
