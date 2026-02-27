@@ -4,12 +4,13 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+
 #define ProductName "Passport CLI"
-#define FileDescription "Secure Password Database"
+#define FileDescription "Secure Database"
 #define ProductVersion "0.0.0.15"
 #define License "MIT License"
-#define LicenseFile "LICENSE.txt"
-#define Copyright "Copyright (c) 2026 Bogachenko Vyacheslav. All rights reserved."
+#define LicenseFile "docs/LICENSE.txt"
+#define Copyright "Copyright (c) 2026 Bogachenko Vyacheslav"
 #define Author "Bogachenko Vyacheslav"
 #define Contact "bogachenkove@outlook.com"
 #define Homepage "https://github.com/bogachenkove/passport"
@@ -17,7 +18,10 @@
 inline std::string read_license_file() {
 	std::ifstream file(LicenseFile);
 	if (!file.is_open()) {
-		return "Please read the license agreement at https://raw.githubusercontent.com/bogachenkove/passport/stable/LICENSE.md";
+		return
+			"License file not found locally.\n"
+			"Please read the license agreement online:\n"
+			"https://raw.githubusercontent.com/bogachenkove/passport/stable/LICENSE.md";
 	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
@@ -25,25 +29,38 @@ inline std::string read_license_file() {
 }
 inline bool handle_metadata_flags(int argc, char* argv[]) {
 	for (int i = 1; i < argc; ++i) {
-		if (std::strcmp(argv[i], "--version") == 0) {
-			std::cout << ProductName << ", version: " << ProductVersion << std::endl;
+		if (std::strcmp(argv[i], "--about") == 0) {
+			std::cout << ProductName << " "
+				<< ProductVersion << " - " << FileDescription << "\n"
+				<< Copyright << "\n\n"
+				<< "Author:   " << Author << "\n"
+				<< "Contact:  " << Contact << "\n"
+				<< "Homepage: " << Homepage << std::endl;
 			return true;
 		}
-		if (std::strcmp(argv[i], "--homepage") == 0) {
-			std::cout << Homepage << std::endl;
+		if (std::strcmp(argv[i], "--version") == 0) {
+			std::cout << ProductName << " "
+				<< ProductVersion << std::endl;
 			return true;
 		}
 		if (std::strcmp(argv[i], "--license") == 0) {
-			std::cout << ProductName << "\n" << Copyright <<
-				"\nThis program is free software released under the " << License
-				"\nUse, modification and distribution are permitted under the terms of the license below.\n\n";
+			std::cout << ProductName << " "
+				<< ProductVersion << " - " << FileDescription << "\n"
+				<< Copyright << "\n\n"
+				<< "This software is released under the "
+				<< License << "."
+				<< "\nYou are free to use, modify, and distribute it "
+				<< "in accordance with the license terms.\n\n";
 			std::cout << read_license_file() << std::endl;
 			return true;
 		}
 		if (std::strcmp(argv[i], "--help") == 0) {
-			std::cout << "Available metadata flags:\n"
+			std::cout << ProductName << " "
+				<< ProductVersion << " - " << FileDescription << "\n"
+				<< Copyright << "\n\n"
+				<< "Available metadata flags:\n"
+				<< "  --about     Show information about the program\n"
 				<< "  --version   Show version information\n"
-				<< "  --homepage  Show project homepage URL\n"
 				<< "  --license   Show license information\n"
 				<< "  --help      Show this help message\n";
 			return true;
