@@ -18,12 +18,11 @@ namespace app::commands {
 	bool OpenDatabaseCommand::execute(std::string& out_db_path,
 		security::SecureString& out_master_pw) {
 		auto raw_secure = term_->prompt_input("  Database path: ");
-		std::string raw(raw_secure.c_str(), raw_secure.size());
-		if (domain::validation::is_field_empty(raw)) {
+		if (domain::validation::is_field_empty(raw_secure)) {
 			term_->show_error("File path cannot be empty.");
 			return false;
 		}
-		std::string path = filesystem::storage::normalise_path(raw);
+		std::string path = filesystem::storage::normalise_path(raw_secure);
 		if (path.empty()) {
 			term_->show_error("Invalid file path.");
 			return false;

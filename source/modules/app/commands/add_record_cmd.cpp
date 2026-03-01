@@ -11,6 +11,7 @@
 #include <memory>
 #include <ctime>
 #include <string>
+#include <charconv>
 
 namespace app::commands {
 	AddRecordCommand::AddRecordCommand(
@@ -153,7 +154,7 @@ namespace app::commands {
 				term_->show_error("Card number cannot be empty.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(input) || 
+			if (!domain::validation::is_digits_only(input) ||
 				input.size() < core::constants::kCardNumberMinLength_BankCard ||
 				input.size() > core::constants::kCardNumberMaxLength_BankCard) {
 				term_->show_error(
@@ -171,20 +172,24 @@ namespace app::commands {
 			break;
 		}
 		while (true) {
-			std::string month_str, year_str;
 			int month, year;
 			while (true) {
 				security::SecureString input = term_->prompt_input("  Expiry Month* (MM): ");
-				month_str = std::string(input.c_str(), input.size());
-				if (domain::validation::is_field_empty(month_str)) {
+				if (input.empty()) {
 					term_->show_error("Month cannot be empty.");
 					continue;
 				}
-				if (month_str.size() != 2 || !domain::validation::is_digits_only(month_str)) {
+				if (input.size() != 2) {
 					term_->show_error("Month must be two digits (e.g., 12).");
 					continue;
 				}
-				month = std::stoi(month_str);
+				const char* mptr = input.c_str();
+				if (!std::isdigit(static_cast<unsigned char>(mptr[0])) ||
+					!std::isdigit(static_cast<unsigned char>(mptr[1]))) {
+					term_->show_error("Month must contain only digits.");
+					continue;
+				}
+				month = (mptr[0] - '0') * 10 + (mptr[1] - '0');
 				if (month < 1 || month > 12) {
 					term_->show_error("Month must be between 01 and 12.");
 					continue;
@@ -203,16 +208,21 @@ namespace app::commands {
 			int max_year = current_year + 10;
 			while (true) {
 				security::SecureString input = term_->prompt_input("  Expiry Year* (YY, current year to +10): ");
-				year_str = std::string(input.c_str(), input.size());
-				if (domain::validation::is_field_empty(year_str)) {
+				if (input.empty()) {
 					term_->show_error("Year cannot be empty.");
 					continue;
 				}
-				if (year_str.size() != 2 || !domain::validation::is_digits_only(year_str)) {
+				if (input.size() != 2) {
 					term_->show_error("Year must be two digits (e.g., 25).");
 					continue;
 				}
-				year = std::stoi(year_str);
+				const char* yptr = input.c_str();
+				if (!std::isdigit(static_cast<unsigned char>(yptr[0])) ||
+					!std::isdigit(static_cast<unsigned char>(yptr[1]))) {
+					term_->show_error("Year must contain only digits.");
+					continue;
+				}
+				year = (yptr[0] - '0') * 10 + (yptr[1] - '0');
 				if (year < current_year || year > max_year) {
 					term_->show_error("Year must be between " +
 						std::to_string(current_year) + " and " +
@@ -221,7 +231,14 @@ namespace app::commands {
 				}
 				break;
 			}
-			std::string expiry = month_str + "/" + year_str;
+			char expiry_buf[6] = {
+			  static_cast<char>('0' + month / 10),
+			  static_cast<char>('0' + month % 10),
+			  '/',
+			  static_cast<char>('0' + year / 10),
+			  static_cast<char>('0' + year % 10),
+			};
+			std::string_view expiry(expiry_buf, 5);
 			if (!domain::validation::is_valid_expiry(expiry)) {
 				term_->show_error("Internal error: generated expiry is invalid. Please try again.");
 				continue;
@@ -432,10 +449,6 @@ namespace app::commands {
 					" digits and contain only digits.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(input)) {
-				term_->show_error("Barcode must contain only digits.");
-				continue;
-			}
 			rec.barcode = std::move(input);
 			break;
 		}
@@ -445,12 +458,17 @@ namespace app::commands {
 				rec.expiry = security::SecureString();
 				break;
 			}
-			std::string month_str(month_input.c_str(), month_input.size());
-			if (month_str.size() != 2 || !domain::validation::is_digits_only(month_str)) {
+			if (month_input.size() != 2) {
 				term_->show_error("Month must be two digits (e.g., 12).");
 				continue;
 			}
-			int month = std::stoi(month_str);
+			const char* mptr = month_input.c_str();
+			if (!std::isdigit(static_cast<unsigned char>(mptr[0])) ||
+				!std::isdigit(static_cast<unsigned char>(mptr[1]))) {
+				term_->show_error("Month must contain only digits.");
+				continue;
+			}
+			int month = (mptr[0] - '0') * 10 + (mptr[1] - '0');
 			if (month < 1 || month > 12) {
 				term_->show_error("Month must be between 01 and 12.");
 				continue;
@@ -466,23 +484,35 @@ namespace app::commands {
 			int current_year = (tm.tm_year + 1900) % 100;
 			int max_year = current_year + 10;
 			security::SecureString year_input = term_->prompt_input("  Expiry Year (YY, current year to +10): ");
-			std::string year_str(year_input.c_str(), year_input.size());
-			if (domain::validation::is_field_empty(year_str)) {
+			if (year_input.empty()) {
 				term_->show_error("Year cannot be empty if month is entered.");
 				continue;
 			}
-			if (year_str.size() != 2 || !domain::validation::is_digits_only(year_str)) {
+			if (year_input.size() != 2) {
 				term_->show_error("Year must be two digits (e.g., 25).");
 				continue;
 			}
-			int year = std::stoi(year_str);
+			const char* yptr = year_input.c_str();
+			if (!std::isdigit(static_cast<unsigned char>(yptr[0])) ||
+				!std::isdigit(static_cast<unsigned char>(yptr[1]))) {
+				term_->show_error("Year must contain only digits.");
+				continue;
+			}
+			int year = (yptr[0] - '0') * 10 + (yptr[1] - '0');
 			if (year < current_year || year > max_year) {
 				term_->show_error("Year must be between " +
 					std::to_string(current_year) + " and " +
 					std::to_string(max_year) + ".");
 				continue;
 			}
-			std::string expiry = month_str + "/" + year_str;
+			char expiry_buf[6] = {
+			  static_cast<char>('0' + month / 10),
+			  static_cast<char>('0' + month % 10),
+			  '/',
+			  static_cast<char>('0' + year / 10),
+			  static_cast<char>('0' + year % 10),
+			};
+			std::string_view expiry(expiry_buf, 5);
 			if (!domain::validation::is_valid_expiry(expiry)) {
 				term_->show_error("Internal error: generated expiry is invalid. Please try again.");
 				continue;
@@ -552,20 +582,24 @@ namespace app::commands {
 	domain::models::MnemonicRecord AddRecordCommand::prompt_mnemonic_record() {
 		domain::models::MnemonicRecord rec;
 		term_->show_message("\n  --- Add New Mnemonic Record (* = required) ---\n");
-		std::string lang;
 		const std::map<std::string, const std::vector<std::string>*> lang_map = {
-		  {"english", &english_wordlist},
-		  {"chinese_simplified", &chinese_simplified_wordlist},
-		  {"chinese_traditional", &chinese_traditional_wordlist},
-		  {"czech", &czech_wordlist},
-		  {"french", &french_wordlist},
-		  {"italian", &italian_wordlist},
-		  {"japanese", &japanese_wordlist},
-		  {"korean", &korean_wordlist},
-		  {"portuguese", &portuguese_wordlist},
-		  {"spanish", &spanish_wordlist},
-		  {"turkish", &turkish_wordlist}
+			{"english", &english_wordlist},
+			{"chinese_simplified", &chinese_simplified_wordlist},
+			{"chinese_traditional", &chinese_traditional_wordlist},
+			{"czech", &czech_wordlist},
+			{"french", &french_wordlist},
+			{"italian", &italian_wordlist},
+			{"japanese", &japanese_wordlist},
+			{"korean", &korean_wordlist},
+			{"portuguese", &portuguese_wordlist},
+			{"spanish", &spanish_wordlist},
+			{"turkish", &turkish_wordlist}
 		};
+		std::vector<std::string_view> allowed_languages;
+		for (const auto& pair : lang_map) {
+			allowed_languages.push_back(pair.first);
+		}
+		security::SecureString selected_lang;
 		while (true) {
 			term_->show_message("  Supported languages:");
 			std::string lang_list;
@@ -574,35 +608,69 @@ namespace app::commands {
 			}
 			term_->show_message("    " + lang_list);
 			security::SecureString input = term_->prompt_input("  Language*: ");
-			lang = std::string(input.c_str(), input.size());
-			std::transform(lang.begin(), lang.end(), lang.begin(),
-				[](unsigned char c) {
-					return std::tolower(c);
+			if (input.empty()) {
+				term_->show_error("Language cannot be empty.");
+				continue;
+			}
+			security::SecureBuffer<char> lower_buf(input.size());
+			char* lower_data = lower_buf.data();
+			for (size_t i = 0; i < input.size(); ++i) {
+				lower_data[i] = std::tolower(static_cast<unsigned char>(input.c_str()[i]));
+			}
+			security::SecureString lower_input(std::string_view(lower_data, input.size()));
+			bool found = false;
+			for (size_t i = 0; i < allowed_languages.size(); ++i) {
+				if (lower_input.size() == allowed_languages[i].size() &&
+					std::equal(lower_input.c_str(), lower_input.c_str() + lower_input.size(),
+						allowed_languages[i].data(),
+						[](unsigned char a, unsigned char b) { return a == b; })) {
+					found = true;
+					selected_lang = std::move(lower_input);
+					break;
 				}
-			);
-			if (lang_map.find(lang) != lang_map.end()) break;
-			term_->show_error("Invalid language. Please choose from the list.");
+			}
+			if (!found) {
+				term_->show_error("Invalid language. Please choose from the list.");
+				continue;
+			}
+			break;
 		}
+		const std::vector<std::string>* wordlist_ptr = nullptr;
+		for (const auto& pair : lang_map) {
+			if (std::string_view(selected_lang.c_str(), selected_lang.size()) == pair.first) {
+				wordlist_ptr = pair.second;
+				break;
+			}
+		}
+		if (!wordlist_ptr) {
+			term_->show_error("Internal error: language not found in map");
+			return rec;
+		}
+		const auto& wordlist = *wordlist_ptr;
+		rec.language = std::move(selected_lang);
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Word count* (12, 15, 18, 21, 24): ");
-			std::string val_str(input.c_str(), input.size());
-			try {
-				std::size_t val = std::stoul(val_str);
-				bool valid = false;
-				for (auto c : core::constants::kValidMnemonicWordCounts) {
-					if (val == c) {
-						rec.value = val;
-						valid = true;
-						break;
-					}
+			if (input.empty()) {
+				term_->show_error("Word count cannot be empty.");
+				continue;
+			}
+			std::size_t val;
+			auto [ptr, ec] = std::from_chars(input.c_str(), input.c_str() + input.size(), val);
+			if (ec != std::errc()) {
+				term_->show_error("Invalid number. Must be one of: 12, 15, 18, 21, 24.");
+				continue;
+			}
+			bool valid = false;
+			for (auto c : core::constants::kValidMnemonicWordCounts) {
+				if (val == c) {
+					rec.value = val;
+					valid = true;
+					break;
 				}
-				if (valid) break;
 			}
-			catch (...) {
-			}
+			if (valid) break;
 			term_->show_error("Invalid word count. Must be one of: 12, 15, 18, 21, 24.");
 		}
-		const auto& wordlist = *lang_map.at(lang);
 		bool phrase_valid = false;
 		while (!phrase_valid) {
 			rec.mnemonic.clear();
@@ -610,35 +678,34 @@ namespace app::commands {
 			for (std::size_t i = 0; i < rec.value; ++i) {
 				while (true) {
 					security::SecureString word_input = term_->prompt_input("  Word " + std::to_string(i + 1) + ": ");
-					std::string word(word_input.c_str(), word_input.size());
-					size_t start = word.find_first_not_of(" \t\r\n");
-					if (start != std::string::npos)
-						word = word.substr(start);
-					else
-						word.clear();
-					size_t end = word.find_last_not_of(" \t\r\n");
-					if (end != std::string::npos)
-						word = word.substr(0, end + 1);
-					else
-						word.clear();
-					if (word.empty()) {
+					if (word_input.empty()) {
 						term_->show_error("Word cannot be empty.");
 						continue;
 					}
-					std::string normalized_word = domain::validation::normalize_nfkd(word);
+					std::string_view word_view(word_input.c_str(), word_input.size());
+					size_t start = word_view.find_first_not_of(" \t\r\n");
+					if (start == std::string_view::npos) {
+						term_->show_error("Word cannot be empty.");
+						continue;
+					}
+					size_t end = word_view.find_last_not_of(" \t\r\n");
+					word_view = word_view.substr(start, end - start + 1);
+					security::SecureString normalized_word = domain::validation::normalize_nfkd(word_view);
 					bool found = false;
 					for (const auto& dict_word : wordlist) {
-						if (domain::validation::normalize_nfkd(dict_word) == normalized_word) {
+						security::SecureString norm_dict = domain::validation::normalize_nfkd(dict_word);
+						if (norm_dict.constant_time_equals(normalized_word)) {
 							found = true;
 							break;
 						}
 					}
 					if (found) {
-						rec.mnemonic.push_back(security::SecureString(normalized_word));
+						rec.mnemonic.push_back(std::move(normalized_word));
 						break;
 					}
 					else {
-						term_->show_error("Invalid word. Not in the BIP39 " + lang + " wordlist.");
+						std::string lang_for_msg(rec.language.c_str(), rec.language.size());
+						term_->show_error("Invalid word. Not in the BIP39 " + lang_for_msg + " wordlist.");
 					}
 				}
 			}
@@ -655,12 +722,13 @@ namespace app::commands {
 				rec.passphrase = security::SecureString();
 				break;
 			}
-			std::string pp(input.c_str(), input.size());
-			pp = domain::validation::normalize_nfkd(pp);
-			if (domain::validation::is_ascii_field_valid(pp,
+			security::SecureString normalized = domain::validation::normalize_nfkd(
+				std::string_view(input.c_str(), input.size())
+			);
+			if (domain::validation::is_ascii_field_valid(normalized,
 				core::constants::kPassphraseMinLength_Mnemonic,
 				core::constants::kPassphraseMaxLength_Mnemonic, true)) {
-				rec.passphrase = security::SecureString(pp);
+				rec.passphrase = std::move(normalized);
 				break;
 			}
 			term_->show_error("If provided, passphrase must be 1-100 printable ASCII characters.");
@@ -674,16 +742,17 @@ namespace app::commands {
 				rec.iteration = core::constants::kIterationMin_Mnemonic;
 				break;
 			}
-			std::string iter_str(input.c_str(), input.size());
-			try {
-				std::uint32_t iter = static_cast<std::uint32_t>(std::stoul(iter_str));
-				if (iter >= core::constants::kIterationMin_Mnemonic &&
-					iter <= core::constants::kIterationMax_Mnemonic) {
-					rec.iteration = iter;
-					break;
-				}
+			std::uint32_t iter;
+			auto [ptr, ec] = std::from_chars(input.c_str(), input.c_str() + input.size(), iter);
+			if (ec != std::errc()) {
+				term_->show_error("Invalid iteration. Must be a number between " +
+					std::to_string(core::constants::kIterationMin_Mnemonic) + " and " +
+					std::to_string(core::constants::kIterationMax_Mnemonic) + ".");
+				continue;
 			}
-			catch (...) {
+			if (iter >= core::constants::kIterationMin_Mnemonic && iter <= core::constants::kIterationMax_Mnemonic) {
+				rec.iteration = iter;
+				break;
 			}
 			term_->show_error("Invalid iteration. Must be a number between " +
 				std::to_string(core::constants::kIterationMin_Mnemonic) + " and " +
@@ -703,7 +772,6 @@ namespace app::commands {
 			}
 			term_->show_error("If provided, note must be 5-30 printable ASCII characters.");
 		}
-		rec.language = security::SecureString(lang);
 		return rec;
 	}
 	domain::models::WiFiRecord AddRecordCommand::prompt_wifi_record() {
@@ -744,10 +812,9 @@ namespace app::commands {
 			term_->show_message("    WPA-Enterprise, WPA2-Enterprise, WPA3-Enterprise,");
 			term_->show_message("    Open, OWE");
 			security::SecureString input = term_->prompt_input("  Security*: ");
-			std::string temp(input.c_str(), input.size());
 			bool valid = false;
 			for (const auto& s : allowed_security) {
-				if (temp == s) {
+				if (std::string_view(input.c_str(), input.size()) == s) {
 					valid = true;
 					break;
 				}

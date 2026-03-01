@@ -21,18 +21,17 @@ namespace app::commands {
 	bool CreateDatabaseCommand::prompt_overwrite(const std::string& path) {
 		term_->show_message("File already exists: " + path);
 		auto resp_secure = term_->prompt_input("  Do you want to overwrite it? (y/N): ");
-		std::string resp(resp_secure.c_str(), resp_secure.size());
-		if (resp.empty()) return false;
-		return std::tolower(static_cast<unsigned char>(resp[0])) == 'y';
+		if (resp_secure.empty()) return false;
+		char resp = std::tolower(static_cast<unsigned char>(resp_secure.c_str()[0]));
+		return resp == 'y';
 	}
 	bool CreateDatabaseCommand::execute(std::string& out_db_path, security::SecureString& out_master_pw) {
 		auto raw_secure = term_->prompt_input("  Database path: ");
-		std::string raw(raw_secure.c_str(), raw_secure.size());
-		if (domain::validation::is_field_empty(raw)) {
+		if (domain::validation::is_field_empty(raw_secure)) {
 			term_->show_error("File path cannot be empty.");
 			return false;
 		}
-		std::string path = filesystem::storage::normalise_db_path(raw, *crypto_);
+		std::string path = filesystem::storage::normalise_db_path(raw_secure, *crypto_);
 		if (path.empty()) {
 			term_->show_error("Invalid file path.");
 			return false;
@@ -55,9 +54,8 @@ namespace app::commands {
 		char mode = 0;
 		while (true) {
 			auto mode_choice_secure = term_->prompt_input("  Your choice (M/A): ");
-			std::string mode_choice(mode_choice_secure.c_str(), mode_choice_secure.size());
-			if (mode_choice.empty()) continue;
-			mode = std::tolower(static_cast<unsigned char>(mode_choice[0]));
+			if (mode_choice_secure.empty()) continue;
+			mode = std::tolower(static_cast<unsigned char>(mode_choice_secure.c_str()[0]));
 			if (mode == 'm' || mode == 'a') break;
 			term_->show_error("Invalid option. Please press M or A.");
 		}

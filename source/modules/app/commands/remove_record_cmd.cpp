@@ -22,13 +22,9 @@ namespace app::commands {
 		ui::display_password_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->password_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->password_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -54,13 +50,9 @@ namespace app::commands {
 		ui::display_note_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->note_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->note_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -86,13 +78,9 @@ namespace app::commands {
 		ui::display_bankcard_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->bankcard_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->bankcard_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -118,13 +106,9 @@ namespace app::commands {
 		ui::display_discountcard_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->discountcard_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->discountcard_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -150,13 +134,9 @@ namespace app::commands {
 		ui::display_transportcard_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->transportcard_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->transportcard_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -182,13 +162,9 @@ namespace app::commands {
 		ui::display_mnemonic_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->mnemonic_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->mnemonic_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -214,13 +190,9 @@ namespace app::commands {
 		ui::display_wifi_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->wifi_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->wifi_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;
@@ -243,13 +215,9 @@ namespace app::commands {
 		ui::display_key_records(*db_, term_);
 		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
-		std::string input(input_secure.c_str(), input_secure.size());
-		auto indices = app::utils::parse_record_numbers(input, db_->key_record_count());
+		auto indices = app::utils::parse_record_numbers(input_secure, db_->key_record_count());
 		if (indices.empty()) {
-			if (input.find('0') != std::string::npos)
 				term_->show_message("Removal cancelled.");
-			else
-				term_->show_error("No valid records to remove.");
 			return;
 		}
 		int removed = 0;

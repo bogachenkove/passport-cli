@@ -79,7 +79,6 @@ namespace app {
 			term_->show_message("  [Q]uit without saving\n");
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			std::string choice_str(choice.c_str(), choice.size());
 			char key = std::tolower(static_cast<unsigned char>(choice.c_str()[0]));
 			switch (key) {
 			case 'l':

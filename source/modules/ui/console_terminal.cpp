@@ -21,18 +21,11 @@ namespace ui {
 	}
 	security::SecureString ConsoleTerminal::prompt_input(const std::string& prompt) {
 		std::cout << prompt;
-		std::string line;
-		std::getline(std::cin, line);
-		security::SecureString result(line);
-		line.assign(line.size(), '\0');
-		return result;
+		return core::platform::read_input();
 	}
 	security::SecureString ConsoleTerminal::prompt_password(const std::string& prompt) {
 		std::cout << prompt;
-		std::string line = core::platform::read_password_masked();
-		security::SecureString result(line);
-		line.assign(line.size(), '\0');
-		return result;
+		return core::platform::read_password_masked();
 	}
 	void ConsoleTerminal::wait_for_enter() {
 		std::cout << "\nPress Enter to continue...";

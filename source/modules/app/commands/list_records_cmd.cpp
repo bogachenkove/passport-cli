@@ -48,8 +48,7 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto hash_choice = term_->prompt_input("  Your choice: ");
 					if (hash_choice.empty()) continue;
-					std::string hash_choice_str(hash_choice.c_str(), hash_choice.size());
-					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice_str[0]));
+					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice.c_str()[0]));
 					if (hash_key == 'm') {
 						ui::display_mnemonic_records(*db_, term_);
 						return;
