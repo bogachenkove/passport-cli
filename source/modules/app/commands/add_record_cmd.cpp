@@ -679,7 +679,6 @@ namespace app::commands {
 					}
 				}
 			}
-			// Используем перегрузку is_mnemonic_valid, работающую с vector<SecureString>
 			if (domain::validation::is_mnemonic_valid(rec.mnemonic, wordlist)) {
 				phrase_valid = true;
 			}

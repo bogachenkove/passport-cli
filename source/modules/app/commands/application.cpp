@@ -78,7 +78,6 @@ namespace app {
 			term_->show_message("  [S]ave database");
 			term_->show_message("  Save and [E]xit");
 			term_->show_message("  [Q]uit without saving\n");
-			// choice теперь security::SecureString
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
 			std::string choice_str(choice.c_str(), choice.size());
