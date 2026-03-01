@@ -84,8 +84,7 @@ namespace app::commands {
 				term_->show_error("Master password cannot be empty.");
 				return false;
 			}
-			std::string pw_str(pw.c_str(), pw.size());
-			if (!domain::validation::is_master_password_length_valid(pw_str)) {
+			if (!domain::validation::is_master_password_length_valid(pw)) {
 				term_->show_error(
 					"Master password must be between " +
 					std::to_string(core::constants::kPasswordMinLength_MasterPassword) +
@@ -94,7 +93,7 @@ namespace app::commands {
 					" characters.");
 				return false;
 			}
-			if (!domain::validation::is_password_characters_valid(pw_str)) {
+			if (!domain::validation::is_password_characters_valid(pw)) {
 				term_->show_error(
 					"Master password contains invalid characters. Allowed characters:\n"
 					"  Lowercase: " + std::string(core::constants::kLowercaseChars) + "\n"
@@ -103,7 +102,7 @@ namespace app::commands {
 					"  Specials: " + std::string(core::constants::kSpecialChars));
 				return false;
 			}
-			if (!domain::validation::is_master_password_complex(pw_str)) {
+			if (!domain::validation::is_master_password_complex(pw)) {
 				term_->show_error(
 					"Master password must contain at least one lowercase letter, "
 					"one uppercase letter, one digit, and one special character. Required characters:\n"

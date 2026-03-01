@@ -22,9 +22,8 @@ namespace app::commands {
 		term_->show_message("\n  --- Add New Password Record (* = required) ---\n");
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Login*:    ");
-			std::string temp(input.c_str(), input.size());
 			if (domain::validation::is_ascii_field_valid(
-				temp,
+				input,
 				core::constants::kLoginMinLength_Password,
 				core::constants::kLoginMaxLength_Password,
 				false)) {
@@ -39,9 +38,8 @@ namespace app::commands {
 		}
 		while (true) {
 			security::SecureString input = term_->prompt_password("  Password*: ");
-			std::string temp(input.c_str(), input.size());
 			if (domain::validation::is_ascii_field_valid(
-				temp,
+				input,
 				core::constants::kPasswordMinLength_Password,
 				core::constants::kPasswordMaxLength_Password,
 				false)) {
@@ -60,8 +58,8 @@ namespace app::commands {
 				rec.url = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			std::string with_proto = domain::validation::ensure_url_protocol(temp);
+			std::string with_proto = domain::validation::ensure_url_protocol(
+				std::string_view(input.c_str(), input.size()));
 			if (with_proto.size() < core::constants::kUrlMinLength_Password ||
 				with_proto.size() > core::constants::kUrlMaxLength_Password) {
 				term_->show_error(
@@ -89,9 +87,8 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
 			if (domain::validation::is_ascii_field_valid(
-				temp,
+				input,
 				core::constants::kNoteMinLength_Password,
 				core::constants::kNoteMaxLength_Password,
 				true)) {
@@ -111,9 +108,8 @@ namespace app::commands {
 		term_->show_message("\n  --- Add New Note Record (* = required) ---\n");
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Title*:  ");
-			std::string temp(input.c_str(), input.size());
 			if (domain::validation::is_ascii_field_valid(
-				temp,
+				input,
 				core::constants::kTitleMinLength_Note,
 				core::constants::kTitleMaxLength_Note,
 				false)) {
@@ -132,9 +128,8 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
 			if (domain::validation::is_ascii_field_valid(
-				temp,
+				input,
 				core::constants::kNoteMinLength_Note,
 				core::constants::kNoteMaxLength_Note,
 				true)) {
@@ -158,20 +153,17 @@ namespace app::commands {
 				term_->show_error("Card number cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCardNumberMinLength_BankCard ||
-				temp.size() > core::constants::kCardNumberMaxLength_BankCard) {
+			if (!domain::validation::is_digits_only(input) || 
+				input.size() < core::constants::kCardNumberMinLength_BankCard ||
+				input.size() > core::constants::kCardNumberMaxLength_BankCard) {
 				term_->show_error(
 					"Card number must be between " +
 					std::to_string(core::constants::kCardNumberMinLength_BankCard) + " and " +
-					std::to_string(core::constants::kCardNumberMaxLength_BankCard) + " digits.");
+					std::to_string(core::constants::kCardNumberMaxLength_BankCard) +
+					" digits and contain only digits.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("Card number must contain only digits.");
-				continue;
-			}
-			if (!domain::validation::is_luhn_valid(temp)) {
+			if (!domain::validation::is_luhn_valid(input)) {
 				term_->show_error("Card number failed Luhn check. Please re-enter.");
 				continue;
 			}
@@ -243,17 +235,14 @@ namespace app::commands {
 				term_->show_error("CVV cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCVVMinLength_BankCard ||
-				temp.size() > core::constants::kCVVMaxLength_BankCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kCVVMinLength_BankCard ||
+				input.size() > core::constants::kCVVMaxLength_BankCard) {
 				term_->show_error(
 					"CVV must be between " +
 					std::to_string(core::constants::kCVVMinLength_BankCard) + " and " +
-					std::to_string(core::constants::kCVVMaxLength_BankCard) + " digits.");
-				continue;
-			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("CVV must contain only digits.");
+					std::to_string(core::constants::kCVVMaxLength_BankCard) +
+					" digits and contain only digits.");
 				continue;
 			}
 			rec.cvv = std::move(input);
@@ -265,17 +254,14 @@ namespace app::commands {
 				term_->show_error("Cardholder name cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCardHolderNameMinLength_BankCard ||
-				temp.size() > core::constants::kCardHolderNameMaxLength_BankCard) {
+			if (!domain::validation::is_letters_and_spaces(input) ||
+				input.size() < core::constants::kCardHolderNameMinLength_BankCard ||
+				input.size() > core::constants::kCardHolderNameMaxLength_BankCard) {
 				term_->show_error(
 					"Cardholder name must be between " +
 					std::to_string(core::constants::kCardHolderNameMinLength_BankCard) + " and " +
-					std::to_string(core::constants::kCardHolderNameMaxLength_BankCard) + " characters.");
-				continue;
-			}
-			if (!domain::validation::is_letters_and_spaces(temp)) {
-				term_->show_error("Cardholder name can contain only letters and spaces.");
+					std::to_string(core::constants::kCardHolderNameMaxLength_BankCard) +
+					" characters and contain only letters and spaces.");
 				continue;
 			}
 			rec.cardholder_name = std::move(input);
@@ -287,19 +273,14 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kNoteMinLength_BankCard ||
-				temp.size() > core::constants::kNoteMaxLength_BankCard) {
+			if (!domain::validation::is_ascii_field_valid(input,
+				core::constants::kNoteMinLength_BankCard,
+				core::constants::kNoteMaxLength_BankCard, true)) {
 				term_->show_error(
 					"Note must be between " +
 					std::to_string(core::constants::kNoteMinLength_BankCard) + " and " +
-					std::to_string(core::constants::kNoteMaxLength_BankCard) + " characters.");
-				continue;
-			}
-			if (!domain::validation::is_ascii_field_valid(temp,
-				core::constants::kNoteMinLength_BankCard,
-				core::constants::kNoteMaxLength_BankCard, true)) {
-				term_->show_error("Note must contain only printable ASCII characters.");
+					std::to_string(core::constants::kNoteMaxLength_BankCard) +
+					" printable ASCII characters.");
 				continue;
 			}
 			rec.note = std::move(input);
@@ -316,20 +297,17 @@ namespace app::commands {
 				term_->show_error("Card number cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCardNumberMinLength_DiscountCard ||
-				temp.size() > core::constants::kCardNumberMaxLength_DiscountCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kCardNumberMinLength_DiscountCard ||
+				input.size() > core::constants::kCardNumberMaxLength_DiscountCard) {
 				term_->show_error(
 					"Card number must be between " +
 					std::to_string(core::constants::kCardNumberMinLength_DiscountCard) + " and " +
-					std::to_string(core::constants::kCardNumberMaxLength_DiscountCard) + " digits.");
+					std::to_string(core::constants::kCardNumberMaxLength_DiscountCard) +
+					" digits and contain only digits.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("Card number must contain only digits.");
-				continue;
-			}
-			if (!domain::validation::is_luhn_valid(temp)) {
+			if (!domain::validation::is_luhn_valid(input)) {
 				term_->show_message("  [!] Warning: Card number does not pass Luhn check (may still be valid).");
 			}
 			rec.card_number = std::move(input);
@@ -341,17 +319,14 @@ namespace app::commands {
 				term_->show_error("Barcode cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kBarCodeMinLength_DiscountCard ||
-				temp.size() > core::constants::kBarCodeMaxLength_DiscountCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kBarCodeMinLength_DiscountCard ||
+				input.size() > core::constants::kBarCodeMaxLength_DiscountCard) {
 				term_->show_error(
 					"Barcode must be between " +
 					std::to_string(core::constants::kBarCodeMinLength_DiscountCard) + " and " +
-					std::to_string(core::constants::kBarCodeMaxLength_DiscountCard) + " digits.");
-				continue;
-			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("Barcode must contain only digits.");
+					std::to_string(core::constants::kBarCodeMaxLength_DiscountCard) +
+					" digits and contain only digits.");
 				continue;
 			}
 			rec.barcode = std::move(input);
@@ -363,17 +338,14 @@ namespace app::commands {
 				rec.cvv = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCVVMinLength_DiscountCard ||
-				temp.size() > core::constants::kCVVMaxLength_DiscountCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kCVVMinLength_DiscountCard ||
+				input.size() > core::constants::kCVVMaxLength_DiscountCard) {
 				term_->show_error(
 					"CVV must be between " +
 					std::to_string(core::constants::kCVVMinLength_DiscountCard) + " and " +
-					std::to_string(core::constants::kCVVMaxLength_DiscountCard) + " digits.");
-				continue;
-			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("CVV must contain only digits.");
+					std::to_string(core::constants::kCVVMaxLength_DiscountCard) +
+					" digits and contain only digits.");
 				continue;
 			}
 			rec.cvv = std::move(input);
@@ -385,8 +357,7 @@ namespace app::commands {
 				term_->show_error("Store name cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (!domain::validation::is_ascii_field_valid(temp,
+			if (!domain::validation::is_ascii_field_valid(input,
 				core::constants::kStoreNameMinLength_DiscountCard,
 				core::constants::kStoreNameMaxLength_DiscountCard, false)) {
 				term_->show_error(
@@ -405,8 +376,7 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (!domain::validation::is_ascii_field_valid(temp,
+			if (!domain::validation::is_ascii_field_valid(input,
 				core::constants::kNoteMinLength_DiscountCard,
 				core::constants::kNoteMaxLength_DiscountCard, true)) {
 				term_->show_error(
@@ -430,20 +400,17 @@ namespace app::commands {
 				term_->show_error("Card number cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCardNumberMinLength_TransportCard ||
-				temp.size() > core::constants::kCardNumberMaxLength_TransportCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kCardNumberMinLength_TransportCard ||
+				input.size() > core::constants::kCardNumberMaxLength_TransportCard) {
 				term_->show_error(
 					"Card number must be between " +
 					std::to_string(core::constants::kCardNumberMinLength_TransportCard) + " and " +
-					std::to_string(core::constants::kCardNumberMaxLength_TransportCard) + " digits.");
+					std::to_string(core::constants::kCardNumberMaxLength_TransportCard) +
+					" digits and contain only digits.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("Card number must contain only digits.");
-				continue;
-			}
-			if (!domain::validation::is_luhn_valid(temp)) {
+			if (!domain::validation::is_luhn_valid(input)) {
 				term_->show_message("  [!] Warning: Card number does not pass Luhn check (may still be valid).");
 			}
 			rec.card_number = std::move(input);
@@ -455,16 +422,17 @@ namespace app::commands {
 				term_->show_error("Barcode cannot be empty.");
 				continue;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kBarCodeMinLength_TransportCard ||
-				temp.size() > core::constants::kBarCodeMaxLength_TransportCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kBarCodeMinLength_TransportCard ||
+				input.size() > core::constants::kBarCodeMaxLength_TransportCard) {
 				term_->show_error(
 					"Barcode must be between " +
 					std::to_string(core::constants::kBarCodeMinLength_TransportCard) + " and " +
-					std::to_string(core::constants::kBarCodeMaxLength_TransportCard) + " digits.");
+					std::to_string(core::constants::kBarCodeMaxLength_TransportCard) +
+					" digits and contain only digits.");
 				continue;
 			}
-			if (!domain::validation::is_digits_only(temp)) {
+			if (!domain::validation::is_digits_only(input)) {
 				term_->show_error("Barcode must contain only digits.");
 				continue;
 			}
@@ -528,8 +496,7 @@ namespace app::commands {
 				rec.holder = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (!domain::validation::is_ascii_field_valid(temp,
+			if (!domain::validation::is_ascii_field_valid(input,
 				core::constants::kHolderMinLength_TransportCard,
 				core::constants::kHolderMaxLength_TransportCard, true)) {
 				term_->show_error(
@@ -548,17 +515,14 @@ namespace app::commands {
 				rec.cvv = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (temp.size() < core::constants::kCVVMinLength_TransportCard ||
-				temp.size() > core::constants::kCVVMaxLength_TransportCard) {
+			if (!domain::validation::is_digits_only(input) ||
+				input.size() < core::constants::kCVVMinLength_TransportCard ||
+				input.size() > core::constants::kCVVMaxLength_TransportCard) {
 				term_->show_error(
 					"CVV must be between " +
 					std::to_string(core::constants::kCVVMinLength_TransportCard) + " and " +
-					std::to_string(core::constants::kCVVMaxLength_TransportCard) + " digits.");
-				continue;
-			}
-			if (!domain::validation::is_digits_only(temp)) {
-				term_->show_error("CVV must contain only digits.");
+					std::to_string(core::constants::kCVVMaxLength_TransportCard) +
+					" digits and contain only digits.");
 				continue;
 			}
 			rec.cvv = std::move(input);
@@ -570,8 +534,7 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (!domain::validation::is_ascii_field_valid(temp,
+			if (!domain::validation::is_ascii_field_valid(input,
 				core::constants::kNoteMinLength_TransportCard,
 				core::constants::kNoteMaxLength_TransportCard, true)) {
 				term_->show_error(
@@ -591,17 +554,17 @@ namespace app::commands {
 		term_->show_message("\n  --- Add New Mnemonic Record (* = required) ---\n");
 		std::string lang;
 		const std::map<std::string, const std::vector<std::string>*> lang_map = {
-          {"english", &english_wordlist},
-          {"chinese_simplified", &chinese_simplified_wordlist},
-          {"chinese_traditional", &chinese_traditional_wordlist},
-          {"czech", &czech_wordlist},
-          {"french", &french_wordlist},
-          {"italian", &italian_wordlist},
-          {"japanese", &japanese_wordlist},
-          {"korean", &korean_wordlist},
-          {"portuguese", &portuguese_wordlist},
-          {"spanish", &spanish_wordlist},
-          {"turkish", &turkish_wordlist}
+		  {"english", &english_wordlist},
+		  {"chinese_simplified", &chinese_simplified_wordlist},
+		  {"chinese_traditional", &chinese_traditional_wordlist},
+		  {"czech", &czech_wordlist},
+		  {"french", &french_wordlist},
+		  {"italian", &italian_wordlist},
+		  {"japanese", &japanese_wordlist},
+		  {"korean", &korean_wordlist},
+		  {"portuguese", &portuguese_wordlist},
+		  {"spanish", &spanish_wordlist},
+		  {"turkish", &turkish_wordlist}
 		};
 		while (true) {
 			term_->show_message("  Supported languages:");
@@ -732,8 +695,7 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string note(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(note,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kNoteMinLength_Mnemonic,
 				core::constants::kNoteMaxLength_Mnemonic, true)) {
 				rec.note = std::move(input);
@@ -749,8 +711,7 @@ namespace app::commands {
 		term_->show_message("\n  --- Add New Wi-Fi Network Record (* = required) ---\n");
 		while (true) {
 			security::SecureString input = term_->prompt_input("  SSID* (3-30 ASCII characters): ");
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kSSIDMinLength_WiFi,
 				core::constants::kSSIDMaxLength_WiFi, false)) {
 				rec.ssid = std::move(input);
@@ -764,8 +725,7 @@ namespace app::commands {
 				rec.password = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kPasswordMinLength_WiFi,
 				core::constants::kPasswordMaxLength_WiFi, true)) {
 				rec.password = std::move(input);
@@ -804,8 +764,7 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kNoteMinLength_WiFi,
 				core::constants::kNoteMaxLength_WiFi, true)) {
 				rec.note = std::move(input);
@@ -820,8 +779,7 @@ namespace app::commands {
 		term_->show_message("\n  --- Add New Key Record (* = required) ---\n");
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Chain/Network* (3-15 ASCII): ");
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kNetworkMinLength_Key,
 				core::constants::kNetworkMaxLength_Key, false)) {
 				rec.chain = std::move(input);
@@ -831,8 +789,7 @@ namespace app::commands {
 		}
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Symbol* (3-4 ASCII, e.g. BTC, ETH): ");
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kSymbolMinLength_Key,
 				core::constants::kSymbolMaxLength_Key, false)) {
 				rec.symbol = std::move(input);
@@ -842,8 +799,7 @@ namespace app::commands {
 		}
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Public Key* (64-128 hex/ASCII): ");
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kPublicMinLength_Key,
 				core::constants::kPublicMaxLength_Key, false)) {
 				rec.publickey = std::move(input);
@@ -853,8 +809,7 @@ namespace app::commands {
 		}
 		while (true) {
 			security::SecureString input = term_->prompt_input("  Private Key* (64-128 hex/ASCII): ");
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kPrivateMinLength_Key,
 				core::constants::kPrivateMaxLength_Key, false)) {
 				rec.privatekey = std::move(input);
@@ -868,8 +823,7 @@ namespace app::commands {
 				rec.note = security::SecureString();
 				break;
 			}
-			std::string temp(input.c_str(), input.size());
-			if (domain::validation::is_ascii_field_valid(temp,
+			if (domain::validation::is_ascii_field_valid(input,
 				core::constants::kNoteMinLength_Key,
 				core::constants::kNoteMaxLength_Key, true)) {
 				rec.note = std::move(input);

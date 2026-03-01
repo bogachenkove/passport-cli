@@ -28,6 +28,9 @@ namespace security {
 		bool empty() const noexcept {
 			return size() == 0;
 		}
+		operator std::string_view() const noexcept {
+			return std::string_view(c_str(), size());
+		}
 		bool constant_time_equals(const SecureString& other) const noexcept {
 			if (size() != other.size()) return false;
 			auto& mem = SecurityManager::instance().memory();

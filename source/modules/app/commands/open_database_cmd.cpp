@@ -42,8 +42,7 @@ namespace app::commands {
 			term_->show_error("Master password cannot be empty.");
 			return false;
 		}
-		std::string pw_str(pw.c_str(), pw.size());
-		if (!domain::validation::is_master_password_length_valid(pw_str)) {
+		if (!domain::validation::is_master_password_length_valid(pw)) {
 			term_->show_error(
 				"Master password must be between " +
 				std::to_string(core::constants::kPasswordMinLength_MasterPassword) +

@@ -27,8 +27,7 @@ namespace app {
 			term_->show_message("  [Q]uit\n");
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			std::string choice_str(choice.c_str(), choice.size());
-			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
+			char key = std::tolower(static_cast<unsigned char>(choice.c_str()[0]));
 			if (key == 'c') {
 				commands::CreateDatabaseCommand cmd(term_, db_, crypto_);
 				database_ready_ = cmd.execute(db_path_, master_pw_);
@@ -81,7 +80,7 @@ namespace app {
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
 			std::string choice_str(choice.c_str(), choice.size());
-			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
+			char key = std::tolower(static_cast<unsigned char>(choice.c_str()[0]));
 			switch (key) {
 			case 'l':
 				commands::ListRecordsCommand(term_, db_).execute();

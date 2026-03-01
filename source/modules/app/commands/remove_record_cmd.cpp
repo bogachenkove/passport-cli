@@ -279,8 +279,7 @@ namespace app::commands {
 		while (true) {
 			auto choice_secure = term_->prompt_input("  Your choice: ");
 			if (choice_secure.empty()) continue;
-			std::string choice(choice_secure.c_str(), choice_secure.size());
-			char key = std::tolower(static_cast<unsigned char>(choice[0]));
+			char key = std::tolower(static_cast<unsigned char>(choice_secure.c_str()[0]));
 			if (key == 'p') {
 				remove_password_records();
 				return;
@@ -293,8 +292,7 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto hash_choice_secure = term_->prompt_input("  Your choice: ");
 					if (hash_choice_secure.empty()) continue;
-					std::string hash_choice(hash_choice_secure.c_str(), hash_choice_secure.size());
-					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice[0]));
+					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice_secure.c_str()[0]));
 					if (hash_key == 'm') {
 						remove_mnemonic_records();
 						return;
@@ -328,8 +326,7 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto card_choice_secure = term_->prompt_input("  Your choice: ");
 					if (card_choice_secure.empty()) continue;
-					std::string card_choice(card_choice_secure.c_str(), card_choice_secure.size());
-					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice_secure.c_str()[0]));
 					if (card_key == 'b') {
 						remove_bankcard_records();
 						return;

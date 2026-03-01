@@ -27,8 +27,7 @@ namespace app::commands {
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			std::string choice_str(choice.c_str(), choice.size());
-			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
+			char key = std::tolower(static_cast<unsigned char>(choice.c_str()[0]));
 			if (key == 'p') {
 				ui::display_password_records(*db_, term_);
 				return;
@@ -84,8 +83,7 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto card_choice = term_->prompt_input("  Your choice: ");
 					if (card_choice.empty()) continue;
-					std::string card_choice_str(card_choice.c_str(), card_choice.size());
-					char card_key = std::tolower(static_cast<unsigned char>(card_choice_str[0]));
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice.c_str()[0]));
 					if (card_key == 'b') {
 						ui::display_bankcard_records(*db_, term_);
 						return;
