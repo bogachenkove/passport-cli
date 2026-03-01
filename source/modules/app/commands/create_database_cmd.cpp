@@ -7,9 +7,9 @@
 #include "../../validation/field_validator.hpp"
 #include "../../storage/file_utils.hpp"
 #include "../../validation/password_policy.hpp"
+#include "../../security/secure_string.hpp"
 #include "../utils/password_generator.hpp"
 #include <cctype>
-#include <string>
 #include <memory>
 
 namespace app::commands {
@@ -20,13 +20,14 @@ namespace app::commands {
 	}
 	bool CreateDatabaseCommand::prompt_overwrite(const std::string& path) {
 		term_->show_message("File already exists: " + path);
-		auto resp = term_->prompt_input("  Do you want to overwrite it? (y/N): ");
+		auto resp_secure = term_->prompt_input("  Do you want to overwrite it? (y/N): ");
+		std::string resp(resp_secure.c_str(), resp_secure.size());
 		if (resp.empty()) return false;
 		return std::tolower(static_cast<unsigned char>(resp[0])) == 'y';
 	}
-	bool CreateDatabaseCommand::execute(std::string& out_db_path,
-		std::string& out_master_pw) {
-		auto raw = term_->prompt_input("  Database path: ");
+	bool CreateDatabaseCommand::execute(std::string& out_db_path, security::SecureString& out_master_pw) {
+		auto raw_secure = term_->prompt_input("  Database path: ");
+		std::string raw(raw_secure.c_str(), raw_secure.size());
 		if (domain::validation::is_field_empty(raw)) {
 			term_->show_error("File path cannot be empty.");
 			return false;
@@ -53,13 +54,14 @@ namespace app::commands {
 		term_->show_message("  [A]uto   - generate a strong password automatically");
 		char mode = 0;
 		while (true) {
-			auto mode_choice = term_->prompt_input("  Your choice (M/A): ");
+			auto mode_choice_secure = term_->prompt_input("  Your choice (M/A): ");
+			std::string mode_choice(mode_choice_secure.c_str(), mode_choice_secure.size());
 			if (mode_choice.empty()) continue;
 			mode = std::tolower(static_cast<unsigned char>(mode_choice[0]));
 			if (mode == 'm' || mode == 'a') break;
 			term_->show_error("Invalid option. Please press M or A.");
 		}
-		std::string pw;
+		security::SecureString pw;
 		if (mode == 'a') {
 			pw = app::utils::generate_random_password(
 				*crypto_,
@@ -67,21 +69,23 @@ namespace app::commands {
 				core::constants::kPasswordMaxLength_MasterPassword
 			);
 			term_->show_message("\nGenerated master password (please write it down):");
-			term_->show_message("  " + pw);
+			term_->show_message("  " + std::string(pw.c_str(), pw.size()));
 			term_->show_message("");
-			auto confirm = term_->prompt_password("  Please re-enter the generated password to confirm: ");
-			if (pw != confirm) {
+			auto confirm_input = term_->prompt_password("  Please re-enter the generated password to confirm: ");
+			if (!pw.constant_time_equals(confirm_input)) {
 				term_->show_error("Passwords do not match. Database creation cancelled.");
 				return false;
 			}
 		}
 		else {
-			pw = term_->prompt_password("  Set master password (min 12 chars): ");
-			if (domain::validation::is_field_empty(pw)) {
+			auto input = term_->prompt_password("  Set master password (min 12 chars): ");
+			pw = std::move(input);
+			if (pw.empty()) {
 				term_->show_error("Master password cannot be empty.");
 				return false;
 			}
-			if (!domain::validation::is_master_password_length_valid(pw)) {
+			std::string pw_str(pw.c_str(), pw.size());
+			if (!domain::validation::is_master_password_length_valid(pw_str)) {
 				term_->show_error(
 					"Master password must be between " +
 					std::to_string(core::constants::kPasswordMinLength_MasterPassword) +
@@ -90,7 +94,7 @@ namespace app::commands {
 					" characters.");
 				return false;
 			}
-			if (!domain::validation::is_password_characters_valid(pw)) {
+			if (!domain::validation::is_password_characters_valid(pw_str)) {
 				term_->show_error(
 					"Master password contains invalid characters. Allowed characters:\n"
 					"  Lowercase: " + std::string(core::constants::kLowercaseChars) + "\n"
@@ -99,7 +103,7 @@ namespace app::commands {
 					"  Specials: " + std::string(core::constants::kSpecialChars));
 				return false;
 			}
-			if (!domain::validation::is_master_password_complex(pw)) {
+			if (!domain::validation::is_master_password_complex(pw_str)) {
 				term_->show_error(
 					"Master password must contain at least one lowercase letter, "
 					"one uppercase letter, one digit, and one special character. Required characters:\n"
@@ -109,8 +113,8 @@ namespace app::commands {
 					"  Specials: " + std::string(core::constants::kSpecialChars));
 				return false;
 			}
-			auto confirm = term_->prompt_password("  Confirm master password: ");
-			if (pw != confirm) {
+			auto confirm_input = term_->prompt_password("  Confirm master password: ");
+			if (!pw.constant_time_equals(confirm_input)) {
 				term_->show_error("Passwords do not match.");
 				return false;
 			}
@@ -127,7 +131,7 @@ namespace app::commands {
 		}
 		term_->show_success("New database created successfully.");
 		out_db_path = path;
-		out_master_pw = pw;
+		out_master_pw = std::move(pw);
 		return true;
 	}
 }

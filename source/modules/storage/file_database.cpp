@@ -4,6 +4,7 @@
 #include "../core/endian.hpp"
 #include "../core/constants.hpp"
 #include "../core/errors.hpp"
+#include "../security/secure_string.hpp"
 #include <chrono>
 #include <cstring>
 #include <fstream>
@@ -209,10 +210,10 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.login = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.password = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.url = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.login = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.password = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.url = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				password_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), note_type.data(), tag.size()) == 0) {
@@ -224,8 +225,8 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.title = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.title = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				note_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), bank_type.data(), tag.size()) == 0) {
@@ -237,11 +238,11 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.expiry_date = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.cvv = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.cardholder_name = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.card_number = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.expiry_date = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.cvv = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.cardholder_name = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				bankcard_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), disc_type.data(), tag.size()) == 0) {
@@ -253,11 +254,11 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.barcode = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.cvv = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.store_name = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.card_number = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.barcode = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.cvv = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.store_name = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				discount_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), trans_type.data(), tag.size()) == 0) {
@@ -269,12 +270,12 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.card_number = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.barcode = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.expiry = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.holder = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.cvv = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.card_number = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.barcode = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.expiry = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.holder = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.cvv = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				transport_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), mnem_type.data(), tag.size()) == 0) {
@@ -295,10 +296,10 @@ namespace security::storage {
 					};
 				}
 				for (std::uint64_t i = 0; i < word_count; ++i) {
-					rec.mnemonic.push_back(filesystem::storage::binary_serializer::read_string_field(plaintext, offset));
+					rec.mnemonic.push_back(filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset));
 				}
-				rec.passphrase = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.language = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.passphrase = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.language = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				if (offset + 4 > plaintext.size()) {
 					throw core::errors::DeserialisationError{
 					  "Truncated MnemonicPhraseRecord: missing iteration."
@@ -306,7 +307,7 @@ namespace security::storage {
 				}
 				rec.iteration = core::endian::read_u32_be(plaintext.data() + offset);
 				offset += 4;
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				mnemonic_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), wifi_type.data(), tag.size()) == 0) {
@@ -318,10 +319,10 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.ssid = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.password = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.security = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.ssid = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.password = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.security = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				wifi_records_.push_back(std::move(rec));
 			}
 			else if (sodium_memcmp(tag.data(), key_type.data(), tag.size()) == 0) {
@@ -333,11 +334,11 @@ namespace security::storage {
 				}
 				rec.date = core::endian::read_u64_be(plaintext.data() + offset);
 				offset += 8;
-				rec.chain = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.symbol = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.publickey = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.privatekey = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
-				rec.note = filesystem::storage::binary_serializer::read_string_field(plaintext, offset);
+				rec.chain = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.symbol = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.publickey = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.privatekey = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
+				rec.note = filesystem::storage::binary_serializer::read_secure_string_field(plaintext, offset);
 				key_records_.push_back(std::move(rec));
 			}
 			else {
@@ -362,8 +363,7 @@ namespace security::storage {
 			}
 		}
 	}
-	bool FileDatabase::load_from_file(const std::string& file_path,
-		const std::string& master_password) {
+	bool FileDatabase::load_from_file(const std::string& file_path, const security::SecureString& master_password) {
 		if (!filesystem::storage::check_file_access(file_path, false)) {
 			throw core::errors::FileAccessError{
 			  "Cannot read from file. Check permissions: " + file_path
@@ -449,7 +449,8 @@ namespace security::storage {
 		}
 		std::size_t ad_size = off - 4;
 		std::vector<std::uint8_t> ad(blob.begin(), blob.begin() + ad_size);
-		auto derived_key = crypto_->derive_key(master_password, salt);
+		std::string master_pw_str(master_password.c_str(), master_password.size());
+		auto derived_key = crypto_->derive_key(master_pw_str, salt);
 		std::vector<std::uint8_t> encrypted(blob.begin() + off,
 			blob.begin() + off + payload_len);
 		auto padded_plaintext = crypto_->aead_decrypt(encrypted, ad, nonce, derived_key);
@@ -478,8 +479,7 @@ namespace security::storage {
 		ts_modified_ = stored_modified;
 		return true;
 	}
-	bool FileDatabase::save_to_file(const std::string& file_path,
-		const std::string& master_password) {
+	bool FileDatabase::save_to_file(const std::string& file_path, const security::SecureString& master_password) {
 		if (!filesystem::storage::check_file_access(file_path, true)) {
 			throw core::errors::FileAccessError{
 			  "Cannot write to file. Check permissions: " + file_path
@@ -490,7 +490,8 @@ namespace security::storage {
 		}
 		auto salt = crypto_->random_bytes(core::constants::kSaltBytes);
 		auto nonce = crypto_->random_bytes(core::constants::kAeadNonceBytes);
-		auto derived_key = crypto_->derive_key(master_password, salt);
+		std::string master_pw_str(master_password.c_str(), master_password.size());
+		auto derived_key = crypto_->derive_key(master_pw_str, salt);
 		std::uint64_t now = unix_timestamp_now();
 		if (ts_created_ == 0) ts_created_ = now;
 		ts_modified_ = now;

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "../security/secure_string.hpp"
 
 namespace domain::validation {
 	std::string ensure_url_protocol(const std::string& url);
@@ -13,5 +14,5 @@ namespace domain::validation {
 	[[nodiscard]] bool is_valid_expiry(const std::string& value);
 	[[nodiscard]] bool is_letters_and_spaces(const std::string& value);
 	[[nodiscard]] bool is_luhn_valid(const std::string& card_number);
-	[[nodiscard]] bool is_mnemonic_valid(const std::vector<std::string>& words, const std::vector<std::string>& wordlist);
+	[[nodiscard]] bool is_mnemonic_valid(const std::vector<security::SecureString>& words, const std::vector<std::string>& wordlist);
 }

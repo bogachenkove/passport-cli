@@ -2,6 +2,7 @@
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_database.hpp"
 #include "../../ui/record_formatter.hpp"
+#include "../../security/secure_string.hpp"
 #include "../utils/input_parser.hpp"
 #include <memory>
 #include <cctype>
@@ -19,8 +20,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_password_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->password_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -50,8 +52,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_note_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->note_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -81,8 +84,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_bankcard_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->bankcard_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -112,8 +116,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_discountcard_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->discountcard_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -143,8 +148,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_transportcard_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->transportcard_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -174,8 +180,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_mnemonic_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->mnemonic_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -205,8 +212,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_wifi_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->wifi_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -233,8 +241,9 @@ namespace app::commands {
 			return;
 		}
 		ui::display_key_records(*db_, term_);
-		auto input = term_->prompt_input(
+		auto input_secure = term_->prompt_input(
 			"\n  Enter record number(s) to remove (separated by spaces, 0 to cancel): ");
+		std::string input(input_secure.c_str(), input_secure.size());
 		auto indices = app::utils::parse_record_numbers(input, db_->key_record_count());
 		if (indices.empty()) {
 			if (input.find('0') != std::string::npos)
@@ -268,8 +277,9 @@ namespace app::commands {
 		term_->show_message("  [W]iFi");
 		term_->show_message("  [Q]uit to main menu\n");
 		while (true) {
-			auto choice = term_->prompt_input("  Your choice: ");
-			if (choice.empty()) continue;
+			auto choice_secure = term_->prompt_input("  Your choice: ");
+			if (choice_secure.empty()) continue;
+			std::string choice(choice_secure.c_str(), choice_secure.size());
 			char key = std::tolower(static_cast<unsigned char>(choice[0]));
 			if (key == 'p') {
 				remove_password_records();
@@ -281,8 +291,9 @@ namespace app::commands {
 					term_->show_message("  [M]nemonic");
 					term_->show_message("  [K]ey");
 					term_->show_message("  [Q]uit to previous menu\n");
-					auto hash_choice = term_->prompt_input("  Your choice: ");
-					if (hash_choice.empty()) continue;
+					auto hash_choice_secure = term_->prompt_input("  Your choice: ");
+					if (hash_choice_secure.empty()) continue;
+					std::string hash_choice(hash_choice_secure.c_str(), hash_choice_secure.size());
 					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice[0]));
 					if (hash_key == 'm') {
 						remove_mnemonic_records();
@@ -315,8 +326,9 @@ namespace app::commands {
 					term_->show_message("  [D]iscount Card");
 					term_->show_message("  [T]ransport Card");
 					term_->show_message("  [Q]uit to previous menu\n");
-					auto card_choice = term_->prompt_input("  Your choice: ");
-					if (card_choice.empty()) continue;
+					auto card_choice_secure = term_->prompt_input("  Your choice: ");
+					if (card_choice_secure.empty()) continue;
+					std::string card_choice(card_choice_secure.c_str(), card_choice_secure.size());
 					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
 					if (card_key == 'b') {
 						remove_bankcard_records();
@@ -343,7 +355,7 @@ namespace app::commands {
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, C, M, N or Q.");
+				term_->show_error("Invalid option. Please press P, C, H, N, W or Q.");
 			}
 		}
 	}

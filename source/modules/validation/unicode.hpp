@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include <unicode/unistr.h>
 #include <unicode/normalizer2.h>

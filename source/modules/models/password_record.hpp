@@ -1,13 +1,14 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include "../security/secure_string.hpp"
 
 namespace domain::models {
 	struct PasswordRecord {
 		std::uint64_t date = 0;
-		std::string login;
-		std::string password;
-		std::string url;
-		std::string note;
+		security::SecureString login;
+		security::SecureString password;
+		security::SecureString url;
+		security::SecureString note;
 	};
 }

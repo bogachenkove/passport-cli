@@ -1,18 +1,16 @@
 #pragma once
-
 #include <cstdint>
 #include <string>
+#include "../security/secure_string.hpp"
 
 namespace domain::models {
-
 	struct TransportCardRecord {
 		std::uint64_t date = 0;
-		std::string card_number;
-		std::string barcode;
-		std::string expiry;
-		std::string holder;
-		std::string cvv;
-		std::string note;
+		security::SecureString card_number;
+		security::SecureString barcode;
+		security::SecureString expiry;
+		security::SecureString holder;
+		security::SecureString cvv;
+		security::SecureString note;
 	};
-
 }

@@ -4,6 +4,7 @@
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_crypto_service.hpp"
 #include "../../interface/interface_database.hpp"
+#include "../../security/secure_string.hpp"
 
 namespace app {
 	class Application {
@@ -18,7 +19,7 @@ namespace app {
 		std::shared_ptr<domain::interfaces::ICryptoService> crypto_;
 		std::shared_ptr<domain::interfaces::IDatabase> db_;
 		std::string db_path_;
-		std::string master_pw_;
+		security::SecureString master_pw_;
 		bool database_ready_ = false;
 		void run_startup_menu();
 		void run_main_menu();

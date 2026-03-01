@@ -1,6 +1,7 @@
 #include "record_formatter.hpp"
 #include "../interface/interface_database.hpp"
 #include "../interface/interface_terminal.hpp"
+#include "../security/secure_string.hpp"
 #include <cstddef>
 #include <iomanip>
 #include <sstream>
@@ -9,6 +10,9 @@
 namespace {
 	std::string format_field(const std::string& field) {
 		return field.empty() ? "---" : field;
+	}
+	std::string format_field(const security::SecureString& field) {
+		return field.empty() ? "---" : std::string(field.c_str(), field.size());
 	}
 }
 namespace ui {
@@ -136,9 +140,7 @@ namespace ui {
 		std::size_t total_w = 5 + (kDateColWidth + 3) + (w_num + 3) + (w_exp + 3) + (w_cvv + 3) + (w_holder + 3) + (w_note + 3);
 		header << "  " << std::string(total_w, '-');
 		term->show_message(header.str());
-		for (std::size_t i = 0;
-			i < records.size();
-			++i) {
+		for (std::size_t i = 0; i < records.size(); ++i) {
 			const auto& r = records[i];
 			std::ostringstream row;
 			row << "  "
@@ -255,9 +257,7 @@ namespace ui {
 			(w_expiry + 3) + (w_cvv + 3) + (w_holder + 3) + (w_note + 3);
 		header << "  " << std::string(total_w, '-');
 		term->show_message(header.str());
-		for (std::size_t i = 0;
-			i < records.size();
-			++i) {
+		for (std::size_t i = 0; i < records.size(); ++i) {
 			const auto& r = records[i];
 			std::ostringstream row;
 			row << "  "
@@ -294,7 +294,7 @@ namespace ui {
 			std::string mnemonic_str;
 			for (const auto& word : r.mnemonic) {
 				if (!mnemonic_str.empty()) mnemonic_str += " ";
-				mnemonic_str += word;
+				mnemonic_str += std::string(word.c_str(), word.size());
 			}
 			if (mnemonic_str.size() > w_mnemonic) w_mnemonic = mnemonic_str.size();
 			std::string pass = format_field(r.passphrase);
@@ -323,15 +323,13 @@ namespace ui {
 			(w_passphrase + 3) + (w_lang + 3) + (w_iter + 3) + (w_note + 3);
 		header << "  " << std::string(total_w, '-');
 		term->show_message(header.str());
-		for (std::size_t i = 0;
-			i < records.size();
-			++i) {
+		for (std::size_t i = 0; i < records.size(); ++i) {
 			const auto& r = records[i];
 			std::ostringstream row;
 			std::string mnemonic_str;
 			for (const auto& word : r.mnemonic) {
 				if (!mnemonic_str.empty()) mnemonic_str += " ";
-				mnemonic_str += word;
+				mnemonic_str += std::string(word.c_str(), word.size());
 			}
 			row << "  "
 				<< std::left
@@ -347,7 +345,7 @@ namespace ui {
 		}
 		term->show_message("\n  Total mnemonic records: " + std::to_string(records.size()));
 	}
-	void ui::display_wifi_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+	void display_wifi_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
 		const auto& records = db.wifi_records();
 		if (records.empty()) {
 			term->show_message("\n  No Wi-Fi network records to display.");
@@ -356,10 +354,10 @@ namespace ui {
 		constexpr std::size_t kDateColWidth = 16;
 		std::size_t w_ssid = 5, w_pass = 8, w_sec = 10, w_note = 5;
 		for (const auto& r : records) {
-			auto s = r.ssid.empty() ? "---" : r.ssid;
-			auto p = r.password.empty() ? "---" : r.password;
-			auto sec = r.security.empty() ? "---" : r.security;
-			auto n = r.note.empty() ? "---" : r.note;
+			auto s = format_field(r.ssid);
+			auto p = format_field(r.password);
+			auto sec = format_field(r.security);
+			auto n = format_field(r.note);
 			if (s.size() > w_ssid) w_ssid = s.size();
 			if (p.size() > w_pass) w_pass = p.size();
 			if (sec.size() > w_sec) w_sec = sec.size();
@@ -386,15 +384,15 @@ namespace ui {
 				<< std::left
 				<< std::setw(5) << (i + 1)
 				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
-				<< std::setw(w_ssid + 3) << (r.ssid.empty() ? "---" : r.ssid)
-				<< std::setw(w_pass + 3) << (r.password.empty() ? "---" : r.password)
-				<< std::setw(w_sec + 3) << (r.security.empty() ? "---" : r.security)
-				<< std::setw(w_note + 3) << (r.note.empty() ? "---" : r.note);
+				<< std::setw(w_ssid + 3) << format_field(r.ssid)
+				<< std::setw(w_pass + 3) << format_field(r.password)
+				<< std::setw(w_sec + 3) << format_field(r.security)
+				<< std::setw(w_note + 3) << format_field(r.note);
 			term->show_message(row.str());
 		}
 		term->show_message("\n  Total Wi-Fi network records: " + std::to_string(records.size()));
 	}
-	void ui::display_key_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
+	void display_key_records(const domain::interfaces::IDatabase& db, std::shared_ptr<domain::interfaces::ITerminal> term) {
 		const auto& records = db.key_records();
 		if (records.empty()) {
 			term->show_message("\n  No key records to display.");
@@ -403,11 +401,16 @@ namespace ui {
 		constexpr std::size_t kDateColWidth = 16;
 		std::size_t w_chain = 5, w_symbol = 5, w_pub = 10, w_priv = 10, w_note = 5;
 		for (const auto& r : records) {
-			if (r.chain.size() > w_chain) w_chain = r.chain.size();
-			if (r.symbol.size() > w_symbol) w_symbol = r.symbol.size();
-			if (r.publickey.size() > w_pub) w_pub = r.publickey.size();
-			if (r.privatekey.size() > w_priv) w_priv = r.privatekey.size();
-			if (r.note.size() > w_note) w_note = r.note.size();
+			auto chain = format_field(r.chain);
+			auto symbol = format_field(r.symbol);
+			auto pub = format_field(r.publickey);
+			auto priv = format_field(r.privatekey);
+			auto note = format_field(r.note);
+			if (chain.size() > w_chain) w_chain = chain.size();
+			if (symbol.size() > w_symbol) w_symbol = symbol.size();
+			if (pub.size() > w_pub) w_pub = pub.size();
+			if (priv.size() > w_priv) w_priv = priv.size();
+			if (note.size() > w_note) w_note = note.size();
 		}
 		std::ostringstream header;
 		header << "\n  --- Key Records (* = required) ---\n\n";
@@ -432,11 +435,11 @@ namespace ui {
 				<< std::left
 				<< std::setw(5) << (i + 1)
 				<< std::setw(kDateColWidth + 3) << term->format_datetime(r.date)
-				<< std::setw(w_chain + 3) << (r.chain.empty() ? "---" : r.chain)
-				<< std::setw(w_symbol + 3) << (r.symbol.empty() ? "---" : r.symbol)
-				<< std::setw(w_pub + 3) << (r.publickey.empty() ? "---" : r.publickey)
-				<< std::setw(w_priv + 3) << (r.privatekey.empty() ? "---" : r.privatekey)
-				<< std::setw(w_note + 3) << (r.note.empty() ? "---" : r.note);
+				<< std::setw(w_chain + 3) << format_field(r.chain)
+				<< std::setw(w_symbol + 3) << format_field(r.symbol)
+				<< std::setw(w_pub + 3) << format_field(r.publickey)
+				<< std::setw(w_priv + 3) << format_field(r.privatekey)
+				<< std::setw(w_note + 3) << format_field(r.note);
 			term->show_message(row.str());
 		}
 		term->show_message("\n  Total key records: " + std::to_string(records.size()));

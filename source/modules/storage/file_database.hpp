@@ -25,8 +25,8 @@ namespace security::storage {
 		FileDatabase& operator=(const FileDatabase&) = delete;
 		FileDatabase(FileDatabase&&) = default;
 		FileDatabase& operator=(FileDatabase&&) = default;
-		bool load_from_file(const std::string& file_path, const std::string& master_password) override;
-		bool save_to_file(const std::string& file_path, const std::string& master_password) override;
+		bool load_from_file(const std::string& file_path, const security::SecureString& master_password) override;
+		bool save_to_file(const std::string& file_path, const security::SecureString& master_password) override;
 		void add_password_record(domain::models::PasswordRecord record) override;
 		void add_note_record(domain::models::NoteRecord record) override;
 		void add_bankcard_record(domain::models::BankCardRecord record) override;

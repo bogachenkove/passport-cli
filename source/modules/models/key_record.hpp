@@ -1,14 +1,15 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include "../security/secure_string.hpp"
 
 namespace domain::models {
 	struct KeyRecord {
 		std::uint64_t date = 0;
-		std::string chain;
-		std::string symbol;
-		std::string publickey;
-		std::string privatekey;
-		std::string note;
+		security::SecureString chain;
+		security::SecureString symbol;
+		security::SecureString publickey;
+		security::SecureString privatekey;
+		security::SecureString note;
 	};
 }

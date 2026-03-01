@@ -10,7 +10,7 @@ namespace app::commands {
 		OpenDatabaseCommand(
 			std::shared_ptr<domain::interfaces::ITerminal> terminal,
 			std::shared_ptr<domain::interfaces::IDatabase> database);
-		bool execute(std::string& out_db_path, std::string& out_master_pw);
+		bool execute(std::string& out_db_path, security::SecureString& out_master_pw);
 	private:
 		std::shared_ptr<domain::interfaces::ITerminal> term_;
 		std::shared_ptr<domain::interfaces::IDatabase> db_;

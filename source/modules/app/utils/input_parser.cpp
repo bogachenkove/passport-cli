@@ -14,15 +14,18 @@ namespace app::utils {
 			try {
 				std::size_t num = std::stoul(token);
 				if (num == 0) {
-					return {};
+					return {
+					};
 				}
 				if (num < 1 || num > max_records) {
-					return {};
+					return {
+					};
 				}
 				indices.push_back(num - 1);
 			}
 			catch (...) {
-				return {};
+				return {
+				};
 			}
 		}
 		std::sort(indices.begin(), indices.end());

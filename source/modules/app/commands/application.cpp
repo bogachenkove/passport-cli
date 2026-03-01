@@ -11,6 +11,7 @@
 #include <cctype>
 #include <memory>
 #include <cstdlib>
+#include <string>
 
 namespace app {
 	Application::Application(
@@ -26,7 +27,8 @@ namespace app {
 			term_->show_message("  [Q]uit\n");
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			char key = std::tolower(static_cast<unsigned char>(choice[0]));
+			std::string choice_str(choice.c_str(), choice.size());
+			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
 			if (key == 'c') {
 				commands::CreateDatabaseCommand cmd(term_, db_, crypto_);
 				database_ready_ = cmd.execute(db_path_, master_pw_);
@@ -52,7 +54,9 @@ namespace app {
 			auto total = core::constants::kMaxFileSize;
 			auto used = total - remaining;
 			auto format_size = [](std::size_t bytes) -> std::string {
-				const char* units[] = { "B", "KB", "MB", "GB" };
+				const char* units[] = {
+				  "B", "KB", "MB", "GB"
+				};
 				int unit = 0;
 				double size = static_cast<double>(bytes);
 				while (size >= 1024.0 && unit < 3) {
@@ -74,9 +78,11 @@ namespace app {
 			term_->show_message("  [S]ave database");
 			term_->show_message("  Save and [E]xit");
 			term_->show_message("  [Q]uit without saving\n");
+			// choice теперь security::SecureString
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			char key = std::tolower(static_cast<unsigned char>(choice[0]));
+			std::string choice_str(choice.c_str(), choice.size());
+			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
 			switch (key) {
 			case 'l':
 				commands::ListRecordsCommand(term_, db_).execute();

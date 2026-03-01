@@ -7,7 +7,7 @@
 
 #define ProductName "Passport CLI"
 #define FileDescription "Secure Database"
-#define ProductVersion "0.0.0.15"
+#define ProductVersion "0.0.0.16"
 #define License "MIT License"
 #define LicenseFile "docs/LICENSE.txt"
 #define Copyright "Copyright (c) 2026 Bogachenko Vyacheslav"

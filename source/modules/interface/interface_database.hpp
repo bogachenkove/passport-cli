@@ -16,8 +16,8 @@ namespace domain::interfaces {
 	class IDatabase {
 	public:
 		virtual ~IDatabase() = default;
-		virtual bool load_from_file(const std::string& file_path, const std::string& master_password) = 0;
-		virtual bool save_to_file(const std::string& file_path, const std::string& master_password) = 0;
+		virtual bool load_from_file(const std::string& file_path, const security::SecureString& master_password) = 0;
+		virtual bool save_to_file(const std::string& file_path, const security::SecureString& master_password) = 0;
 		virtual void add_password_record(domain::models::PasswordRecord record) = 0;
 		virtual void add_note_record(domain::models::NoteRecord record) = 0;
 		virtual void add_bankcard_record(domain::models::BankCardRecord record) = 0;

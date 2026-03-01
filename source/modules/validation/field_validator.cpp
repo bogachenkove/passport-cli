@@ -93,14 +93,15 @@ namespace domain::validation {
 		}
 		return (sum % 10) == 0;
 	}
-	bool domain::validation::is_mnemonic_valid(const std::vector<std::string>& words, const std::vector<std::string>& wordlist) {
+	bool domain::validation::is_mnemonic_valid(const std::vector<security::SecureString>& words, const std::vector<std::string>& wordlist) {
 		const size_t word_count = words.size();
 		if (word_count != 12 && word_count != 15 && word_count != 18 && word_count != 21 && word_count != 24) {
 			return false;
 		}
 		std::vector<uint16_t> indices(word_count);
 		for (size_t i = 0; i < word_count; ++i) {
-			auto it = std::find(wordlist.begin(), wordlist.end(), words[i]);
+			std::string_view word(words[i].c_str(), words[i].size());
+			auto it = std::find(wordlist.begin(), wordlist.end(), word);
 			if (it == wordlist.end()) {
 				return false;
 			}

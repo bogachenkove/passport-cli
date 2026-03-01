@@ -6,6 +6,7 @@
 #include "../../storage/file_utils.hpp"
 #include "../../core/constants.hpp"
 #include "../../core/errors.hpp"
+#include "../../security/secure_string.hpp"
 #include <string>
 #include <memory>
 
@@ -15,8 +16,9 @@ namespace app::commands {
 		std::shared_ptr<domain::interfaces::IDatabase> database) : term_(std::move(terminal)), db_(std::move(database)) {
 	}
 	bool OpenDatabaseCommand::execute(std::string& out_db_path,
-		std::string& out_master_pw) {
-		auto raw = term_->prompt_input("  Database path: ");
+		security::SecureString& out_master_pw) {
+		auto raw_secure = term_->prompt_input("  Database path: ");
+		std::string raw(raw_secure.c_str(), raw_secure.size());
 		if (domain::validation::is_field_empty(raw)) {
 			term_->show_error("File path cannot be empty.");
 			return false;
@@ -35,12 +37,13 @@ namespace app::commands {
 			return false;
 		}
 		term_->show_message("Opening: " + path);
-		std::string pw = term_->prompt_password("  Master password: ");
-		if (domain::validation::is_field_empty(pw)) {
+		security::SecureString pw = term_->prompt_password("  Master password: ");
+		if (pw.empty()) {
 			term_->show_error("Master password cannot be empty.");
 			return false;
 		}
-		if (!domain::validation::is_master_password_length_valid(pw)) {
+		std::string pw_str(pw.c_str(), pw.size());
+		if (!domain::validation::is_master_password_length_valid(pw_str)) {
 			term_->show_error(
 				"Master password must be between " +
 				std::to_string(core::constants::kPasswordMinLength_MasterPassword) +
@@ -72,7 +75,7 @@ namespace app::commands {
 			if (count > 0) {
 				success_msg += " " + std::to_string(count) + " " + label + (count == 1 ? "" : "s") + ";";
 			}
-		};
+			};
 		add_count(db_->password_record_count(), "password record");
 		add_count(db_->note_record_count(), "note record");
 		add_count(db_->bankcard_record_count(), "bank card record");
@@ -90,7 +93,7 @@ namespace app::commands {
 		}
 		term_->show_success(success_msg);
 		out_db_path = path;
-		out_master_pw = pw;
+		out_master_pw = std::move(pw);
 		return true;
 	}
 }

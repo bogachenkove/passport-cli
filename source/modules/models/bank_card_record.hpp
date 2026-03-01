@@ -1,14 +1,15 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include "../security/secure_string.hpp"
 
 namespace domain::models {
 	struct BankCardRecord {
 		std::uint64_t date = 0;
-		std::string card_number;
-		std::string expiry_date;
-		std::string cvv;
-		std::string cardholder_name;
-		std::string note;
+		security::SecureString card_number;
+		security::SecureString expiry_date;
+		security::SecureString cvv;
+		security::SecureString cardholder_name;
+		security::SecureString note;
 	};
 }

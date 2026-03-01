@@ -4,6 +4,7 @@
 #include <ctime>
 #include <string>
 #include "../core/platform.hpp"
+#include "../security/secure_string.hpp"
 
 namespace ui {
 	void ConsoleTerminal::show_message(const std::string& msg) {
@@ -18,15 +19,20 @@ namespace ui {
 	void ConsoleTerminal::clear_screen() {
 		core::platform::clear_screen();
 	}
-	std::string ConsoleTerminal::prompt_input(const std::string& prompt) {
+	security::SecureString ConsoleTerminal::prompt_input(const std::string& prompt) {
 		std::cout << prompt;
 		std::string line;
 		std::getline(std::cin, line);
-		return line;
+		security::SecureString result(line);
+		line.assign(line.size(), '\0');
+		return result;
 	}
-	std::string ConsoleTerminal::prompt_password(const std::string& prompt) {
+	security::SecureString ConsoleTerminal::prompt_password(const std::string& prompt) {
 		std::cout << prompt;
-		return core::platform::read_password_masked();
+		std::string line = core::platform::read_password_masked();
+		security::SecureString result(line);
+		line.assign(line.size(), '\0');
+		return result;
 	}
 	void ConsoleTerminal::wait_for_enter() {
 		std::cout << "\nPress Enter to continue...";

@@ -2,8 +2,10 @@
 #include "../../ui/record_formatter.hpp"
 #include "../../interface/interface_terminal.hpp"
 #include "../../interface/interface_database.hpp"
+#include "../../security/secure_string.hpp"
 #include <memory>
 #include <cctype>
+#include <string>
 
 namespace app::commands {
 	ListRecordsCommand::ListRecordsCommand(
@@ -25,7 +27,8 @@ namespace app::commands {
 		while (true) {
 			auto choice = term_->prompt_input("  Your choice: ");
 			if (choice.empty()) continue;
-			char key = std::tolower(static_cast<unsigned char>(choice[0]));
+			std::string choice_str(choice.c_str(), choice.size());
+			char key = std::tolower(static_cast<unsigned char>(choice_str[0]));
 			if (key == 'p') {
 				ui::display_password_records(*db_, term_);
 				return;
@@ -46,7 +49,8 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto hash_choice = term_->prompt_input("  Your choice: ");
 					if (hash_choice.empty()) continue;
-					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice[0]));
+					std::string hash_choice_str(hash_choice.c_str(), hash_choice.size());
+					char hash_key = std::tolower(static_cast<unsigned char>(hash_choice_str[0]));
 					if (hash_key == 'm') {
 						ui::display_mnemonic_records(*db_, term_);
 						return;
@@ -80,7 +84,8 @@ namespace app::commands {
 					term_->show_message("  [Q]uit to previous menu\n");
 					auto card_choice = term_->prompt_input("  Your choice: ");
 					if (card_choice.empty()) continue;
-					char card_key = std::tolower(static_cast<unsigned char>(card_choice[0]));
+					std::string card_choice_str(card_choice.c_str(), card_choice.size());
+					char card_key = std::tolower(static_cast<unsigned char>(card_choice_str[0]));
 					if (card_key == 'b') {
 						ui::display_bankcard_records(*db_, term_);
 						return;
@@ -106,7 +111,7 @@ namespace app::commands {
 				return;
 			}
 			else {
-				term_->show_error("Invalid option. Please press P, C, M, N or Q.");
+				term_->show_error("Invalid option. Please press P, C, H, N, W or Q.");
 			}
 		}
 	}
