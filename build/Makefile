@@ -164,6 +164,7 @@ vpath %.cpp $(SRC_DIR)/modules/core
 vpath %.cpp $(SRC_DIR)/modules/crypto
 vpath %.cpp $(SRC_DIR)/modules/interface
 vpath %.cpp $(SRC_DIR)/modules/models
+vpath %.cpp $(SRC_DIR)/modules/security
 vpath %.cpp $(SRC_DIR)/modules/storage
 vpath %.cpp $(SRC_DIR)/modules/ui
 vpath %.cpp $(SRC_DIR)/modules/validation
