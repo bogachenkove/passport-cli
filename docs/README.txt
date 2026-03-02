@@ -33,14 +33,13 @@ Technology Stack
 Building
 
 Requirements
-- CMake
-- Make
+- CMake or Make
 - C++20 compiler (GCC, Clang)
 - libsodium (static or shared)
 - ICU (libraries and headers)
 
 First launch
-- Choose [C] to create a new database (or select [O] to open an existing database).
+- Choose [C] to create a new database (or choose [O] to open an existing database).
 - Enter a file path (or just a directory – a unique filename will be generated).
 - Select password mode: [M]anual or [A]uto‑generated.
 - Follow the prompts to set a strong master password (min. 12 characters with at least one lowercase, uppercase, digit, and special character).
@@ -70,7 +69,7 @@ Database Format
 The file is exactly 100 MiB (see core::constants::kMaxFileSize) and consists of:
 
 - Header (fixed size):
-  - 4‑byte magic PSRT
+  - 4‑byte magic 'PSRT'
   - 1‑byte null
   - Salt (16 bytes)
   - Nonce (24 bytes)
@@ -91,10 +90,10 @@ The remaining space in the fixed‑size file is filled with random bytes (paddin
 
 License
 
-This project is licensed under the MIT License – see the LICENSE file for details.
+This project is licensed under the MIT License – see the LICENSE.txt file (in the 'docs' folder) for details.
 
 Author
 
 Bogachenko Vyacheslav
 Copyright (c) 2026 Bogachenko Vyacheslav (bogachenkove@outlook.com)
-https://github.com/bogachenkove/passport-cli
+https://github.com/bogachenkove/passport
