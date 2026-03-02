@@ -3,8 +3,8 @@
 #include <string_view>
 #include <unicode/unistr.h>
 #include <unicode/normalizer2.h>
-#include "../../security/secure_string.hpp"
-#include "../../security/secure_buffer.hpp"
+#include "../security/secure_string.hpp"
+#include "../security/secure_buffer.hpp"
 
 namespace domain::validation {
 	inline security::SecureString normalize_nfkd(std::string_view input) {
@@ -26,8 +26,16 @@ namespace domain::validation {
 		if (U_FAILURE(status)) {
 			return security::SecureString(input);
 		}
-		std::string result;
-		normalized.toUTF8String(result);
-		return security::SecureString(result);
+		int32_t utf8Length = normalized.extract(0, normalized.length(), nullptr, "utf-8");
+		if (utf8Length <= 0) {
+			return security::SecureString();
+		}
+		security::SecureBuffer<char> buffer(utf8Length);
+		char* dest = buffer.data();
+		int32_t written = normalized.extract(0, normalized.length(), dest, "utf-8");
+		if (written != utf8Length) {
+			return security::SecureString(input);
+		}
+		return security::SecureString(std::string_view(dest, written));
 	}
 }

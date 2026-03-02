@@ -1,6 +1,7 @@
 #pragma once
 #include "../security/secure_string.hpp"
 #include "../security/secure_buffer.hpp"
+#include "../validation/unicode.hpp"
 #include <filesystem>
 #include <string>
 #include <iostream>
@@ -89,112 +90,157 @@ namespace core::platform {
 		return '/';
 #endif
 	}
+	inline bool wide_to_utf8(const std::vector<wchar_t>& wchars, security::SecureBuffer<char>& buffer) {
+		if (wchars.empty()) {
+			return true;
+		}
+		UErrorCode status = U_ZERO_ERROR;
+		icu::UnicodeString ustr(wchars.data(), static_cast<int32_t>(wchars.size()), status);
+		if (U_FAILURE(status)) {
+			return false;
+		}
+		int32_t utf8_len = ustr.extract(0, ustr.length(), nullptr, "utf-8");
+		if (utf8_len <= 0) {
+			return false;
+		}
+		if (buffer.size() < static_cast<std::size_t>(utf8_len)) {
+			return false;
+		}
+		char* dest = buffer.data();
+		int32_t written = ustr.extract(0, ustr.length(), dest, "utf-8");
+		if (written != utf8_len) {
+			return false;
+		}
+		return true;
+	}
 	inline security::SecureString read_input() {
+		std::vector<wchar_t> wchars;
 		constexpr std::size_t MAX_INPUT = 1024;
-		security::SecureBuffer<char> buffer(MAX_INPUT);
-		char* data = buffer.data();
-		std::size_t pos = 0;
 #ifdef _WIN32
 		while (true) {
-			int ch = _getch();
-			if (ch == '\r' || ch == '\n') {
+			wint_t ch = _getwch();
+			if (ch == L'\r' || ch == L'\n') {
 				break;
 			}
-			if (ch == '\b' || ch == 127) {
-				if (pos > 0) {
-					--pos;
-					std::cout << "\b \b";
+			if (ch == L'\b' || ch == 127) {
+				if (!wchars.empty()) {
+					wchars.pop_back();
+					std::wcout << L"\b \b";
 				}
 			}
-			else if (ch >= 32 && ch <= 126) {
-				if (pos < MAX_INPUT - 1) {
-					data[pos++] = static_cast<char>(ch);
-					std::cout << static_cast<char>(ch);
+			else if (ch >= 32 && ch <= 0x10FFFF) {
+				if (wchars.size() < MAX_INPUT - 1) {
+					wchars.push_back(static_cast<wchar_t>(ch));
+					_putwch(ch);
 				}
 			}
 		}
-		std::cout << '\n';
+		std::wcout << L'\n';
 #else
-		struct termios orig, raw;
-		tcgetattr(STDIN_FILENO, &orig);
-		raw = orig;
-		raw.c_lflag &= ~ICANON;
-		raw.c_lflag |= ECHO;
-		tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 		while (true) {
-			int ch = getchar();
-			if (ch == '\n') {
+			wint_t ch = getwchar();
+			if (ch == L'\n') {
 				break;
 			}
-			if (ch == 127 || ch == '\b') {
-				if (pos > 0) {
-					--pos;
-					std::cout << "\b \b";
+			if (ch == L'\b' || ch == 127) {
+				if (!wchars.empty()) {
+					wchars.pop_back();
+					std::wcout << L"\b \b";
 				}
 			}
-			else if (ch >= 32 && ch <= 126) {
-				if (pos < MAX_INPUT - 1) {
-					data[pos++] = static_cast<char>(ch);
+			else if (ch >= 32 && ch <= 0x10FFFF) {
+				if (wchars.size() < MAX_INPUT - 1) {
+					wchars.push_back(static_cast<wchar_t>(ch));
+					putwchar(ch);
 				}
 			}
 		}
-		std::cout << '\n';
-		tcsetattr(STDIN_FILENO, TCSANOW, &orig);
+		std::wcout << L'\n';
 #endif
-		return security::SecureString(std::string_view(data, pos));
+		if (wchars.empty()) {
+			return security::SecureString();
+		}
+		icu::UnicodeString ustr;
+#if defined(_WIN32)
+		ustr.setTo(reinterpret_cast<const char16_t*>(wchars.data()), static_cast<int32_t>(wchars.size()));
+#else
+		ustr.setTo(static_cast<const UChar32*>(wchars.data()), static_cast<int32_t>(wchars.size()));
+#endif
+		int32_t utf8_len = ustr.extract(0, ustr.length(), nullptr, "utf-8");
+		if (utf8_len <= 0) {
+			return security::SecureString();
+		}
+		security::SecureBuffer<char> buffer(utf8_len);
+		char* dest = buffer.data();
+		int32_t written = ustr.extract(0, ustr.length(), dest, "utf-8");
+		if (written != utf8_len) {
+			return security::SecureString();
+		}
+		return security::SecureString(std::string_view(dest, written));
 	}
 	inline security::SecureString read_password_masked() {
+		std::vector<wchar_t> wchars;
 		constexpr std::size_t MAX_PASSWORD = 256;
-		security::SecureBuffer<char> buffer(MAX_PASSWORD);
-		char* data = buffer.data();
-		std::size_t pos = 0;
 #ifdef _WIN32
 		while (true) {
-			int ch = _getch();
-			if (ch == '\r' || ch == '\n') {
+			wint_t ch = _getwch();
+			if (ch == L'\r' || ch == L'\n') {
 				break;
 			}
-			if (ch == '\b' || ch == 127) {
-				if (pos > 0) {
-					--pos;
-					std::cout << "\b \b";
+			if (ch == L'\b' || ch == 127) {
+				if (!wchars.empty()) {
+					wchars.pop_back();
+					std::wcout << L"\b \b";
 				}
 			}
-			else if (ch >= 32 && ch <= 126) {
-				if (pos < MAX_PASSWORD - 1) {
-					data[pos++] = static_cast<char>(ch);
-					std::cout << '*';
+			else if (ch >= 32 && ch <= 0x10FFFF) {
+				if (wchars.size() < MAX_PASSWORD - 1) {
+					wchars.push_back(static_cast<wchar_t>(ch));
+					std::wcout << L'*';
 				}
 			}
 		}
-		std::cout << '\n';
+		std::wcout << L'\n';
 #else
-		struct termios orig, raw;
-		tcgetattr(STDIN_FILENO, &orig);
-		raw = orig;
-		raw.c_lflag &= ~(ECHO | ICANON);
-		tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 		while (true) {
-			int ch = getchar();
-			if (ch == '\n' || ch == '\r') {
+			wint_t ch = getwchar();
+			if (ch == L'\n') {
 				break;
 			}
-			if (ch == 127 || ch == '\b') {
-				if (pos > 0) {
-					--pos;
-					std::cout << "\b \b";
+			if (ch == L'\b' || ch == 127) {
+				if (!wchars.empty()) {
+					wchars.pop_back();
+					std::wcout << L"\b \b";
 				}
 			}
-			else if (ch >= 32 && ch <= 126) {
-				if (pos < MAX_PASSWORD - 1) {
-					data[pos++] = static_cast<char>(ch);
-					std::cout << '*';
+			else if (ch >= 32 && ch <= 0x10FFFF) {
+				if (wchars.size() < MAX_PASSWORD - 1) {
+					wchars.push_back(static_cast<wchar_t>(ch));
+					std::wcout << L'*';
 				}
 			}
 		}
-		std::cout << '\n';
-		tcsetattr(STDIN_FILENO, TCSANOW, &orig);
+		std::wcout << L'\n';
 #endif
-		return security::SecureString(std::string_view(data, pos));
+		if (wchars.empty()) {
+			return security::SecureString();
+		}
+		icu::UnicodeString ustr;
+#if defined(_WIN32)
+		ustr.setTo(reinterpret_cast<const char16_t*>(wchars.data()), static_cast<int32_t>(wchars.size()));
+#else
+		ustr.setTo(static_cast<const UChar32*>(wchars.data()), static_cast<int32_t>(wchars.size()));
+#endif
+		int32_t utf8_len = ustr.extract(0, ustr.length(), nullptr, "utf-8");
+		if (utf8_len <= 0) {
+			return security::SecureString();
+		}
+		security::SecureBuffer<char> buffer(utf8_len);
+		char* dest = buffer.data();
+		int32_t written = ustr.extract(0, ustr.length(), dest, "utf-8");
+		if (written != utf8_len) {
+			return security::SecureString();
+		}
+		return security::SecureString(std::string_view(dest, written));
 	}
 }
