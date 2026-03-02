@@ -2,6 +2,7 @@
 #include "../core/constants.hpp"
 #include "../core/errors.hpp"
 #include <string>
+#include <string_view>
 #include <vector>
 #include <cstdint>
 #include <sodium.h>
@@ -45,7 +46,7 @@ namespace security::crypto {
 		}
 	}
 	std::vector<std::uint8_t> SodiumCryptoService::derive_key(
-		const std::string& password,
+		std::string_view password,
 		const std::vector<std::uint8_t>& salt) {
 		validate_salt_size(salt);
 		std::vector<std::uint8_t> key(core::constants::kDerivedKeyLength);

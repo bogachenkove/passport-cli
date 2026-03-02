@@ -449,8 +449,7 @@ namespace security::storage {
 		}
 		std::size_t ad_size = off - 4;
 		std::vector<std::uint8_t> ad(blob.begin(), blob.begin() + ad_size);
-		std::string master_pw_str(master_password.c_str(), master_password.size());
-		auto derived_key = crypto_->derive_key(master_pw_str, salt);
+		auto derived_key = crypto_->derive_key(master_password, salt);
 		std::vector<std::uint8_t> encrypted(blob.begin() + off,
 			blob.begin() + off + payload_len);
 		auto padded_plaintext = crypto_->aead_decrypt(encrypted, ad, nonce, derived_key);
@@ -490,8 +489,7 @@ namespace security::storage {
 		}
 		auto salt = crypto_->random_bytes(core::constants::kSaltBytes);
 		auto nonce = crypto_->random_bytes(core::constants::kAeadNonceBytes);
-		std::string master_pw_str(master_password.c_str(), master_password.size());
-		auto derived_key = crypto_->derive_key(master_pw_str, salt);
+		auto derived_key = crypto_->derive_key(master_password, salt);
 		std::uint64_t now = unix_timestamp_now();
 		if (ts_created_ == 0) ts_created_ = now;
 		ts_modified_ = now;
