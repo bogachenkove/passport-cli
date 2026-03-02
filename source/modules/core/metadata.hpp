@@ -54,6 +54,18 @@ inline bool handle_metadata_flags(int argc, char* argv[]) {
 			std::cout << read_license_file() << std::endl;
 			return true;
 		}
+		if (std::strcmp(argv[i], "--support") == 0) {
+			std::cout << ProductName << " "
+				<< ProductVersion << " - " << FileDescription << "\n"
+				<< Copyright << "\n\n"
+				<< "Donating is an act of generosity. Your support, however modest it might be, is necessary and you can provide it, \n"
+				<< "because you love the " << ProductName << " project and enjoy it. Your donations help to continue to support and improve this project!\n\n"
+				<< "At the same time, the " << ProductName << " project remains free to use and is distributed under the " << License << " so making a donation is completely optional. \n"
+				<< "You can continue enjoying and using it without paying anything. Contributions are a voluntary way to show appreciation and help the project grow, \n"
+				<< "but there is absolutely no obligation to donate."
+				<< std::endl;
+			return true;
+		}
 		if (std::strcmp(argv[i], "--help") == 0) {
 			std::cout << ProductName << " "
 				<< ProductVersion << " - " << FileDescription << "\n"
@@ -62,6 +74,7 @@ inline bool handle_metadata_flags(int argc, char* argv[]) {
 				<< "  --about     Show information about the program\n"
 				<< "  --version   Show version information\n"
 				<< "  --license   Show license information\n"
+				<< "  --support   Show support information\n"
 				<< "  --help      Show this help message\n";
 			return true;
 		}
