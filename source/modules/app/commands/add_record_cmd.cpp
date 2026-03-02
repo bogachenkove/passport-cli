@@ -22,7 +22,7 @@ namespace app::commands {
 		domain::models::PasswordRecord rec;
 		term_->show_message("\n  --- Add New Password Record (* = required) ---\n");
 		while (true) {
-			security::SecureString input = term_->prompt_input("  Login*:    ");
+			security::SecureString input = term_->prompt_input("  Login*: ");
 			if (domain::validation::is_ascii_field_valid(
 				input,
 				core::constants::kLoginMinLength_Password,
@@ -54,7 +54,7 @@ namespace app::commands {
 				" printable ASCII characters.");
 		}
 		while (true) {
-			security::SecureString input = term_->prompt_input("  URL:      (optional, leave empty for ---) ");
+			security::SecureString input = term_->prompt_input("  URL: (optional, leave empty for ---) ");
 			if (input.empty()) {
 				rec.url = security::SecureString();
 				break;
@@ -83,7 +83,7 @@ namespace app::commands {
 			}
 		}
 		while (true) {
-			security::SecureString input = term_->prompt_input("  Note:     (optional, leave empty for ---) ");
+			security::SecureString input = term_->prompt_input("  Note: (optional, leave empty for ---) ");
 			if (input.empty()) {
 				rec.note = security::SecureString();
 				break;
@@ -124,7 +124,7 @@ namespace app::commands {
 				" printable ASCII characters.");
 		}
 		while (true) {
-			security::SecureString input = term_->prompt_input("  Note:    (optional, leave empty for ---) ");
+			security::SecureString input = term_->prompt_input("  Note: (optional, leave empty for ---) ");
 			if (input.empty()) {
 				rec.note = security::SecureString();
 				break;
@@ -331,7 +331,7 @@ namespace app::commands {
 			break;
 		}
 		while (true) {
-			security::SecureString input = term_->prompt_input("  Barcode* (digits only, 6-13): ");
+			security::SecureString input = term_->prompt_input("  Barcode* (digits only, 12-13): ");
 			if (input.empty()) {
 				term_->show_error("Barcode cannot be empty.");
 				continue;
@@ -434,7 +434,7 @@ namespace app::commands {
 			break;
 		}
 		while (true) {
-			security::SecureString input = term_->prompt_input("  Barcode* (digits only, 6-13): ");
+			security::SecureString input = term_->prompt_input("  Barcode* (digits only, 12-13): ");
 			if (input.empty()) {
 				term_->show_error("Barcode cannot be empty.");
 				continue;
